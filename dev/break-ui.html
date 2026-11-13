@@ -1,0 +1,18 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>break-ui · BAG STORE SF</title>
+<script>
+/* Carga el index.html real, inyecta los datos de prueba en la frontera de datos y agrega el selector. */
+(async () => {
+  const CLOSE = '<' + '/script>';
+  const catalogTag = '<script src="assets/data/catalog.js">' + CLOSE;
+  const html = await (await fetch('../index.html')).text();
+  const patched = html
+    .replace('<head>', '<head><base href="../" />')
+    .replace(catalogTag, catalogTag + '<script src="dev/fixtures.js">' + CLOSE)
+    .replace('</body>', '<script src="dev/toggle.js">' + CLOSE + '</body>');
+  document.open();
+  document.write(patched);
+  document.close();
+})();
+</script>
