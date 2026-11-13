@@ -248,6 +248,8 @@
     $('[data-photo-color]', sheet).innerHTML = `<option value="">Todos los colores</option>` +
       named.map((c) => `<option value="${c.id}"${img.color === c.id ? ' selected' : ''}>${escapeHTML(c.name)}</option>`).join('');
     sheet.showModal();
+    sheet.scrollTop = 0;
+    $('[data-photo-action="close"]', sheet).focus({ preventScroll: true });
     requestAnimationFrame(() => requestAnimationFrame(() => sheet.classList.add('is-open')));
   }
 

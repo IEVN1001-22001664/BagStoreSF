@@ -548,6 +548,11 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
   background: rgb(23 10 36 / 0);
   transition: background-color 240ms ease;
   overscroll-behavior: contain;
+  /* El <dialog> nunca debe desplazarse: al abrir, el panel aún está en translateY(100%)
+     y enfocar el botón ✕ hacía que el navegador lo desplazara, dejando la ficha cortada.
+     clip (no hidden): un contenedor hidden aún se puede desplazar por código o por foco. */
+  overflow: hidden;
+  overflow: clip;
 }
 .sheet::backdrop { background: transparent; }
 .sheet.is-open { background: rgb(23 10 36 / 0.5); }

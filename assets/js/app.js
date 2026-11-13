@@ -293,7 +293,12 @@
     els.sheetBody.scrollTop = 0;
     setupGallery();
     document.documentElement.classList.add('is-locked');
-    if (!els.sheet.open) els.sheet.showModal();
+    if (!els.sheet.open) {
+      els.sheet.showModal();
+      // showModal enfoca el ✕ mientras el panel sigue fuera de pantalla: se reenfoca sin desplazar
+      els.sheet.scrollTop = 0;
+      $('[data-sheet-close]').focus({ preventScroll: true });
+    }
     els.sheetPanel.style.transform = '';
     requestAnimationFrame(() => requestAnimationFrame(() => els.sheet.classList.add('is-open')));
     if (push) history.replaceState(null, '', `#producto-${p.ref}`);
