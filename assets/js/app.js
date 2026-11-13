@@ -18,8 +18,20 @@
   const MARQUEE = ['Steve Madden', 'Guess', 'Tommy Hilfiger', 'Bebe', 'Piezas originales', 'San Felipe, Gto.'];
   const FAV_KEY = 'bagstore:favs';
 
-  const money = new Intl.NumberFormat('es-MX', { style: 'currency', currency: store.currency || 'MXN', maximumFractionDigits: 0 });
-  const normalize = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const currency = store.currency || 'MXN';
+  const moneyInt = new Intl.NumberFormat('es-MX', { style: 'currency', currency, maximumFractionDigits: 0 });
+  const moneyDec = new Intl.NumberFormat('es-MX', { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const money = { format: (n) => (Number.isInteger(n) ? moneyInt : moneyDec).format(n) };
+  const hasPrice = (p) => typeof p.price === 'number' && Number.isFinite(p.price) && p.price > 0;
+  const priceLabel = (p) => (hasPrice(p) ? money.format(p.price) : 'Consultar precio');
+  const isSoldOut = (p) => p.stock === 0;
+  const count = (n, one, many) => `${n.toLocaleString('es-MX')} ${n === 1 ? one : many}`;
+  // Sin acentos ni puntuación: "O'Neill" se encuentra con "oneill"
+  const normalize = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\p{L}\p{N}\s]/gu, '').toLowerCase();
+  const PLACEHOLDER = { src: 'assets/img/brand/logo.webp', sm: 'assets/img/brand/logo.webp', w: 512, h: 512, fallback: true };
+  const imagesOf = (p) => (Array.isArray(p.images) && p.images.length ? p.images : [PLACEHOLDER]);
+  const ON_IMG_ERROR = `onerror="this.onerror=null;this.removeAttribute('srcset');this.src='${PLACEHOLDER.src}';this.classList.add('is-fallback')"`;
+  const PAGE_SIZE = 24;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   const HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.3-9.2C1.4 7.9 3.6 4.5 7 4.5c2 0 3.6 1.1 5 2.9 1.4-1.8 3-2.9 5-2.9 3.4 0 5.6 3.4 4.3 6.8-1.8 4.6-9.3 9.2-9.3 9.2z"/></svg>';
@@ -38,7 +50,7 @@
   }
 
   /* ---------- Estado ---------- */
-  const state = { category: 'all', brand: 'all', sort: 'featured', query: '', onlyFavs: false };
+  const state = { category: 'all', brand: 'all', sort: 'featured', query: '', onlyFavs: false, limit: PAGE_SIZE };
 
   const els = {
     header: $('[data-header]'),
@@ -49,6 +61,10 @@
     search: $('[data-search]'),
     result: $('[data-result]'),
     empty: $('[data-empty]'),
+    emptyTitle: $('[data-empty-title]'),
+    emptyText: $('[data-empty-text]'),
+    reset: $('[data-reset]'),
+    more: $('[data-more]'),
     favFilter: $('[data-fav-filter]'),
     favCount: $('[data-fav-count]'),
     sheet: $('[data-sheet]'),
@@ -59,15 +75,18 @@
 
   /* ---------- Contenido estático ---------- */
   function renderStatic() {
-    $('[data-total]').textContent = products.length;
+    $('[data-total]').textContent = products.filter((p) => !isSoldOut(p)).length.toLocaleString('es-MX');
     $('[data-year]').textContent = new Date().getFullYear();
     $('[data-address]').textContent = store.address;
     $('[data-maps]').href = store.mapsUrl;
 
-    const heroItems = HERO_REFS.map((ref) => products.find((p) => p.ref === ref)).filter(Boolean);
+    const withPhoto = (p) => p && Array.isArray(p.images) && p.images.length;
+    let heroItems = HERO_REFS.map((ref) => products.find((p) => p.ref === ref)).filter(withPhoto);
+    if (heroItems.length < 3) heroItems = products.filter(withPhoto).slice(0, 3);
+    const priced = products.filter((p) => hasPrice(p) && !isSoldOut(p)).map((p) => p.price);
     $('[data-hero-stack]').innerHTML = heroItems.map((p) =>
-      `<div class="hero__card"><img src="${p.images[0].src}" alt="" width="${p.images[0].w}" height="${p.images[0].h}" fetchpriority="high" /></div>`
-    ).join('') + `<div class="hero__tag">Desde <span>${money.format(Math.min(...products.map((p) => p.price)))}</span></div>`;
+      `<div class="hero__card"><img src="${p.images[0].src}" alt="" width="${p.images[0].w}" height="${p.images[0].h}" fetchpriority="high" ${ON_IMG_ERROR} /></div>`
+    ).join('') + (priced.length ? `<div class="hero__tag">Desde <span>${money.format(Math.min(...priced))}</span></div>` : '');
 
     const items = MARQUEE.map((t) => `<span class="marquee__item">${escapeHTML(t)}</span>`).join('');
     $('[data-marquee]').innerHTML = items + items; // duplicado para el loop infinito
@@ -79,10 +98,12 @@
 
   function renderChips() {
     const counts = products.reduce((acc, p) => ((acc[p.category] = (acc[p.category] || 0) + 1), acc), {});
-    els.chips.innerHTML = CATEGORIES
+    const known = new Set(CATEGORIES.map((c) => c.id));
+    const extra = Object.keys(counts).filter((id) => !known.has(id)).map((id) => ({ id, label: catLabel(id) }));
+    els.chips.innerHTML = [...CATEGORIES, ...extra]
       .filter((c) => c.id === 'all' || counts[c.id])
       .map((c) => `<button class="chip" type="button" role="tab" data-category="${c.id}" aria-selected="${state.category === c.id}">
-          ${c.label} <small>${c.id === 'all' ? products.length : counts[c.id]}</small>
+          ${c.label} <small>${(c.id === 'all' ? products.length : counts[c.id]).toLocaleString('es-MX')}</small>
         </button>`).join('');
   }
 
@@ -95,46 +116,49 @@
       (!state.onlyFavs || favs.has(p.ref)) &&
       (!q || normalize(`${p.name} ${p.brand || ''} ${p.ref}`).includes(q))
     );
-    if (state.sort === 'price-asc') list = [...list].sort((a, b) => a.price - b.price);
-    if (state.sort === 'price-desc') list = [...list].sort((a, b) => b.price - a.price);
-    return list;
+    const dir = state.sort === 'price-asc' ? 1 : state.sort === 'price-desc' ? -1 : 0;
+    return list
+      .map((p, i) => ({ p, i }))
+      .sort((a, b) =>
+        isSoldOut(a.p) - isSoldOut(b.p) ||
+        (dir && (!hasPrice(a.p) - !hasPrice(b.p) || dir * ((a.p.price || 0) - (b.p.price || 0)))) ||
+        a.i - b.i)
+      .map(({ p }) => p);
   }
 
   /* ---------- Grid ---------- */
   let observer;
   function cardHTML(p) {
-    const [main, alt] = p.images;
-    const img = (im, cls) => `<img class="card__img ${cls}" src="${im.sm}" srcset="${im.sm} 460w, ${im.src} 1000w"
-        sizes="(min-width: 1100px) 300px, (min-width: 700px) 32vw, 50vw" alt="" loading="lazy" decoding="async" />`;
-    const unique = p.stock === 1;
-    return `<li class="card is-pending" data-ref="${p.ref}">
-      <button class="card__hit" type="button" data-open="${p.ref}" aria-label="${escapeHTML(p.name)}, ${money.format(p.price)}">
+    const imgs = imagesOf(p);
+    const [main, alt] = imgs;
+    const img = (im, cls) => im.fallback
+      ? `<img class="card__img is-fallback ${cls}" src="${im.src}" alt="" loading="lazy" decoding="async" />`
+      : `<img class="card__img ${cls}" src="${im.sm}" srcset="${im.sm} 460w, ${im.src} 1000w"
+        sizes="(min-width: 1100px) 300px, (min-width: 700px) 32vw, 50vw" alt="" loading="lazy" decoding="async" ${ON_IMG_ERROR} />`;
+    const soldOut = isSoldOut(p);
+    const badge = soldOut ? '<span class="badge badge--out">Agotada</span>'
+      : p.stock === 1 ? '<span class="badge">Pieza única</span>'
+      : p.stock > 1 ? `<span class="badge badge--dark">Quedan ${p.stock.toLocaleString('es-MX')}</span>` : '';
+    return `<li class="card is-pending${soldOut ? ' is-soldout' : ''}" data-ref="${p.ref}">
+      <button class="card__hit" type="button" data-open="${p.ref}" aria-label="${escapeHTML(p.name)}, ${soldOut ? 'agotada' : priceLabel(p)}">
         <span class="card__media">
           ${img(main, '')}
           ${alt ? img(alt, 'card__img--alt') : ''}
-          ${unique ? '<span class="badge">Pieza única</span>' : p.stock > 1 ? `<span class="badge badge--dark">${p.stock} disponibles</span>` : ''}
-          ${p.images.length > 1 ? `<span class="card__photos">${p.images.length} fotos</span>` : ''}
+          ${badge}
+          ${imgs.length > 1 ? `<span class="card__photos">${imgs.length} fotos</span>` : ''}
         </span>
         <span class="card__info">
           <span class="card__brand">${escapeHTML(p.brand || 'Selección BS')}</span>
           <span class="card__name">${escapeHTML(p.name)}</span>
-          <span class="card__meta"><span class="card__price">${money.format(p.price)}</span><span class="card__ref">#${p.ref}</span></span>
+          <span class="card__meta"><span class="card__price${hasPrice(p) ? '' : ' card__price--ask'}">${priceLabel(p)}</span><span class="card__ref">#${p.ref}</span></span>
         </span>
       </button>
       <button class="heart" type="button" data-fav="${p.ref}" aria-pressed="${favs.has(p.ref)}" aria-label="Guardar ${escapeHTML(p.name)} en favoritos">${HEART}</button>
     </li>`;
   }
 
-  function renderGrid() {
-    const list = filtered();
-    els.grid.innerHTML = list.map(cardHTML).join('');
-    els.empty.hidden = list.length > 0;
-    els.result.textContent = list.length === products.length
-      ? `${list.length} piezas`
-      : `${list.length} de ${products.length} piezas`;
-
-    observer?.disconnect();
-    observer = new IntersectionObserver((entries) => {
+  function observeCards(cards) {
+    observer ??= new IntersectionObserver((entries) => {
       let batch = 0;
       for (const e of entries) {
         if (!e.isIntersecting) continue;
@@ -143,7 +167,46 @@
         observer.unobserve(e.target);
       }
     }, { rootMargin: '0px 0px -40px 0px' });
-    els.grid.querySelectorAll('.card').forEach((c) => observer.observe(c));
+    cards.forEach((c) => observer.observe(c));
+  }
+
+  let currentList = [];
+  function renderGrid() {
+    currentList = filtered();
+    state.limit = PAGE_SIZE;
+    observer?.disconnect();
+    els.grid.innerHTML = currentList.slice(0, state.limit).map(cardHTML).join('');
+    observeCards(els.grid.querySelectorAll('.card'));
+
+    const total = products.length;
+    els.empty.hidden = currentList.length > 0;
+    if (total === 0) {
+      els.emptyTitle.textContent = 'Muy pronto, nuevas piezas.';
+      els.emptyText.textContent = 'Estamos preparando la próxima colección. Vuelve pronto.';
+      els.reset.hidden = true;
+    } else {
+      els.emptyTitle.textContent = 'Nada por aquí… todavía.';
+      els.emptyText.textContent = 'Prueba con otra búsqueda o categoría.';
+      els.reset.hidden = false;
+    }
+    els.result.textContent = currentList.length === total
+      ? count(total, 'pieza', 'piezas')
+      : `${currentList.length.toLocaleString('es-MX')} de ${count(total, 'pieza', 'piezas')}`;
+    updateMore();
+  }
+
+  function loadMore() {
+    const start = state.limit;
+    state.limit += PAGE_SIZE;
+    els.grid.insertAdjacentHTML('beforeend', currentList.slice(start, state.limit).map(cardHTML).join(''));
+    observeCards([...els.grid.children].slice(start));
+    updateMore();
+  }
+
+  function updateMore() {
+    const left = currentList.length - state.limit;
+    els.more.hidden = left <= 0;
+    if (left > 0) els.more.textContent = `Ver más · ${count(left, 'pieza', 'piezas')}`;
   }
 
   /* ---------- Favoritos UI ---------- */
@@ -165,39 +228,52 @@
 
   /* ---------- Contacto ---------- */
   function contactFor(p) {
-    const msg = `¡Hola! Me interesa la pieza #${p.ref} · ${p.name} (${money.format(p.price)}) del catálogo.`;
-    if (store.whatsapp) return { href: `https://wa.me/${store.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, label: 'Pedir por WhatsApp' };
+    const soldOut = isSoldOut(p);
+    const price = hasPrice(p) ? ` (${money.format(p.price)})` : '';
+    const msg = soldOut
+      ? `¡Hola! Vi que la pieza #${p.ref} · ${p.name} está agotada. ¿Me avisan si vuelve a llegar?`
+      : `¡Hola! Me interesa la pieza #${p.ref} · ${p.name}${price} del catálogo.${hasPrice(p) ? '' : ' ¿Qué precio tiene?'}`;
+    if (store.whatsapp) return { href: `https://wa.me/${store.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, label: soldOut ? 'Avísame si vuelve' : 'Pedir por WhatsApp' };
     if (store.instagram) return { href: `https://ig.me/m/${store.instagram.replace(/^@/, '')}`, label: 'Escribir por Instagram' };
     return { href: store.mapsUrl, label: 'Apartar en tienda' };
   }
 
   /* ---------- Ficha de producto ---------- */
   const CAT_LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
+  function catLabel(id) {
+    if (CAT_LABEL[id]) return CAT_LABEL[id];
+    const t = String(id || 'Accesorios').replace(/[-_]+/g, ' ');
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
   let current = null;
 
   function sheetHTML(p) {
     const contact = contactFor(p);
-    const slides = p.images.map((im, i) =>
-      `<div class="gallery__slide"><img src="${im.src}" alt="${escapeHTML(p.name)} — foto ${i + 1}" width="${im.w}" height="${im.h}" ${i ? 'loading="lazy"' : ''} /></div>`).join('');
-    const multi = p.images.length > 1;
+    const imgs = imagesOf(p);
+    const soldOut = isSoldOut(p);
+    const slides = imgs.map((im, i) =>
+      `<div class="gallery__slide"><img ${im.fallback ? 'class="is-fallback" ' : ''}src="${im.src}" alt="${im.fallback ? 'Sin foto disponible' : `${escapeHTML(p.name)} — foto ${i + 1}`}" width="${im.w}" height="${im.h}" ${i ? 'loading="lazy"' : ''} ${ON_IMG_ERROR} /></div>`).join('');
+    const multi = imgs.length > 1;
     return `
       <div class="gallery" data-gallery>
         <div class="gallery__track" data-track tabindex="0" aria-label="Fotos de ${escapeHTML(p.name)}">${slides}</div>
         ${multi ? `
           <button class="gallery__nav gallery__nav--prev" type="button" data-nav="-1" aria-label="Foto anterior" disabled>${CHEVRON('prev')}</button>
           <button class="gallery__nav gallery__nav--next" type="button" data-nav="1" aria-label="Foto siguiente">${CHEVRON('next')}</button>
-          <div class="gallery__dots">${p.images.map((_, i) => `<button class="gallery__dot" type="button" data-dot="${i}" aria-label="Foto ${i + 1}" aria-current="${i === 0}"></button>`).join('')}</div>` : ''}
+          <div class="gallery__dots">${imgs.map((_, i) => `<button class="gallery__dot" type="button" data-dot="${i}" aria-label="Foto ${i + 1}" aria-current="${i === 0}"></button>`).join('')}</div>` : ''}
       </div>
       <div class="detail">
         <p class="detail__brand">${escapeHTML(p.brand || 'Selección BS')}</p>
         <h2 class="detail__title" id="sheet-title">${escapeHTML(p.name)}</h2>
-        <p class="detail__price">${money.format(p.price)}</p>
+        <p class="detail__price${hasPrice(p) ? '' : ' detail__price--ask'}">${priceLabel(p)}</p>
         <ul class="detail__tags">
-          ${p.stock === 1 ? '<li class="is-hot">Pieza única</li>' : p.stock > 1 ? `<li>${p.stock} disponibles</li>` : ''}
-          <li>${escapeHTML(CAT_LABEL[p.category] || 'Accesorios')}</li>
+          ${soldOut ? '<li class="is-out">Agotada</li>' : p.stock === 1 ? '<li class="is-hot">Pieza única</li>' : p.stock > 1 ? `<li>Quedan ${p.stock.toLocaleString('es-MX')}</li>` : ''}
+          <li>${escapeHTML(catLabel(p.category))}</li>
           <li>Ref. #${p.ref}</li>
         </ul>
-        <p class="detail__note">Original y lista para estrenar. Visítanos en ${escapeHTML(store.address)} o apártala antes de que alguien más se enamore.</p>
+        <p class="detail__note">${soldOut
+          ? 'Esta pieza ya encontró dueña. Escríbenos y te avisamos si vuelve a llegar o te mostramos algo parecido.'
+          : `Original y lista para estrenar. Visítanos en ${escapeHTML(store.address)} o apártala antes de que alguien más se enamore.`}</p>
         <div class="detail__actions">
           <a class="button button--primary" href="${contact.href}" target="_blank" rel="noopener">${contact.label}</a>
           <button class="icon-button" type="button" data-fav="${p.ref}" aria-pressed="${favs.has(p.ref)}" aria-label="Guardar en favoritos">${HEART}</button>
@@ -309,7 +385,7 @@
   }
   async function share(p) {
     const url = `${location.origin}${location.pathname}#producto-${p.ref}`;
-    const data = { title: `${p.name} · ${store.name}`, text: `${p.name} — ${money.format(p.price)}`, url };
+    const data = { title: `${p.name} · ${store.name}`, text: `${p.name} — ${priceLabel(p)}`, url };
     if (navigator.share) {
       try { await navigator.share(data); } catch { /* cancelado */ }
       return;
@@ -327,6 +403,7 @@
       chip.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: reduceMotion.matches ? 'auto' : 'smooth' });
       renderGrid();
     });
+    els.more.addEventListener('click', loadMore);
     els.brand.addEventListener('change', () => { state.brand = els.brand.value; renderGrid(); });
     els.sort.addEventListener('change', () => { state.sort = els.sort.value; renderGrid(); });
     let t;
