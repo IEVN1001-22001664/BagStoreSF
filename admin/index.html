@@ -7,8 +7,14 @@
   <meta name="robots" content="noindex, nofollow" />
   <meta name="color-scheme" content="light" />
   <meta name="theme-color" content="#fbf8f4" />
-  <link rel="icon" href="../assets/img/brand/logo.webp" type="image/webp" />
-  <link rel="apple-touch-icon" href="../assets/img/brand/apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon-192.png" type="image/png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <!-- iOS: abre a pantalla completa desde el ícono de inicio -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Mi tienda" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <link rel="preconnect" href="https://xspwkmkqeyzbuirjpytp.supabase.co" crossorigin />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -55,7 +61,7 @@
   <div data-view="panel" hidden>
     <header class="admin-header">
       <div class="admin-header__inner">
-        <a class="brand" href="../" aria-label="Ver el catálogo">
+        <a class="brand" href="../" target="_blank" rel="noopener" aria-label="Ver el catálogo">
           <img class="brand__logo" src="../assets/img/brand/logo.webp" alt="" width="36" height="36" />
           <span class="admin-header__title">Mi tienda</span>
         </a>
@@ -81,6 +87,14 @@
     </header>
 
     <main class="admin-main" data-section="list">
+      <div class="install-card" data-install hidden>
+        <img class="install-card__icon" src="icons/icon-192.png" alt="" width="44" height="44" />
+        <p class="install-card__text"><strong>Ten el panel a un toque</strong><span data-install-text></span></p>
+        <button class="button button--primary install-card__go" type="button" data-install-go hidden>Instalar</button>
+        <button class="icon-button install-card__close" type="button" data-install-close aria-label="No volver a mostrar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
       <p class="admin-status" data-list-status aria-live="polite"></p>
       <ul class="stock-list" data-list></ul>
       <div class="empty" data-list-empty hidden>

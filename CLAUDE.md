@@ -17,7 +17,7 @@ Migrado desde una tienda Kyte. El dueño del proyecto escribe en español: respo
 | Archivo | Qué contiene |
 | --- | --- |
 | `assets/js/config.js` | URL de Supabase y clave publicable (la usan el catálogo y el panel) |
-| `admin/` | Panel en `/admin/` (rutas `#piezas`, `#pieza/<uuid>`, `#nueva`, `#tienda`): `api.js` (REST, Storage y sesión, sin SDK), `admin.js` (lista con − n + y guardado automático, datos de la tienda), `editor.js` (editar/crear/eliminar pieza), `images.js` (redimensiona fotos en el navegador), `admin.css` |
+| `admin/` | Panel en `/admin/` (rutas `#piezas`, `#pieza/<uuid>`, `#nueva`, `#tienda`): `api.js` (REST, Storage y sesión, sin SDK), `admin.js` (lista con − n + y guardado automático, datos de la tienda), `editor.js` (editar/crear/eliminar pieza), `images.js` (redimensiona fotos en el navegador), `admin.css`, PWA: `manifest.webmanifest`, `sw.js`, `icons/` |
 | `assets/js/data.js` | Carga el catálogo: Supabase (`rpc/catalog`) → copia en localStorage → `catalog.js`. Expone `window.BAGSTORE_READY` |
 | `assets/data/catalog.js` | **Respaldo** (ya no es la fuente de verdad): `window.BAGSTORE = { store, products }` con los 40 productos de la migración |
 | `assets/js/app.js` | Filtros, búsqueda, favoritos (localStorage), ficha de producto, paginación de 24, enlaces `#producto-NN` |
@@ -31,7 +31,7 @@ Migrado desde una tienda Kyte. El dueño del proyecto escribe en español: respo
 Plan acordado: Supabase (Postgres + Storage + Auth con correo y contraseña) usado con `fetch` directo, sin SDK ni build.
 Proyecto: `https://xspwkmkqeyzbuirjpytp.supabase.co` (la clave publicable está en `data.js`; la `service_role` nunca va al repo).
 Fases: 1) esquema y seed ✅ · 2) el catálogo lee `rpc/catalog` con `catalog.js` de respaldo ✅ · 3) `/admin` de
-disponibilidad ✅ · 4) edición completa y fotos ✅ (requiere `003_guardar_pieza.sql`) · 5) PWA y prueba en teléfono.
+disponibilidad ✅ · 4) edición completa y fotos ✅ (requiere `003_guardar_pieza.sql`) · 5) PWA ✅ (falta la prueba en teléfono real).
 Cada pieza tiene colores (`product_colors`) con su propio stock; el stock de la pieza es la suma (o `null`).
 El editor guarda con `rpc/save_product` (todo o nada); los ids de pieza, color y foto se generan en el navegador para subir
 las fotos antes de guardar. Las categorías aún no se editan desde el panel.
@@ -74,6 +74,11 @@ Skills que el usuario pidió usar en el frontend: **emil-design-eng** y **mobile
   (`dev/admin-mock.js`). Estados: `ok | denied | savefail | offline | empty | slow`. Contraseña `incorrecta` simula
   error de acceso; cualquier otra entra. No uses la cuenta real de la dueña para probar.
 
+- **PWA del panel:** `admin/sw.js` (alcance `/admin/`) va a la red primero y usa su caché solo sin conexión, así
+  cada despliegue se ve de inmediato. Solo guarda los archivos de `SHELL`; si agregas o renombras un archivo del panel,
+  súmalo ahí y sube `VERSION`. Nunca intercepta Supabase. En el simulador de `dev/` no se registra.
+  En iPhone la app instalada tiene su propio almacenamiento: la dueña inicia sesión una vez dentro de la app.
+
 ## Origen de los datos (Kyte)
 
 - Tienda: `httpswwwinstagramcombagstoresfmdxtc.kyte.site` (protegida por Cloudflare: usa un navegador real, no curl).
@@ -89,4 +94,5 @@ Skills que el usuario pidió usar en el frontend: **emil-design-eng** y **mobile
 - Hay nombres repetidos (11 "Cartera Muñequera Steve Madden"); hoy solo los distingue `ref`. Lo ideal es agregar el color.
 - El Instagram de Kyte estaba mal capturado; `store.instagram` está vacío hasta tener el usuario correcto.
 - El banner de Kyte es de baja resolución (458×284) y no se usa.
-- Falta probar en un teléfono real (arrastrar para cerrar la ficha, notch, teclado).
+- Falta probar en un teléfono real: arrastrar para cerrar la ficha, notch, teclado, instalar el panel, cámara y fotos HEIC.
+- Las categorías no se editan desde el panel (solo en Supabase → tabla `categories`).

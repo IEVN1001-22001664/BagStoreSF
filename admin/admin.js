@@ -137,6 +137,7 @@
       // Sin conexión: se muestra el panel con el aviso y el botón de actualizar
     }
     state.admin = true;
+    showInstall();
     await route();
     load();
     loadCategories();
@@ -482,6 +483,51 @@
   window.addEventListener('beforeunload', (e) => {
     if (hasUnsaved() || window.BagEditor?.isDirty()) { e.preventDefault(); e.returnValue = ''; }
   });
+
+  /* ---------- Instalar como app (PWA) ---------- */
+  const INSTALL_KEY = 'bagstore:install-dismissed';
+  const install = {
+    card: $('[data-install]'), text: $('[data-install-text]'), go: $('[data-install-go]'), prompt: null,
+  };
+  const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const dismissed = () => { try { return localStorage.getItem(INSTALL_KEY) === '1'; } catch { return false; } };
+
+  function showInstall() {
+    if (isStandalone() || dismissed() || !window.matchMedia('(pointer: coarse)').matches) return;
+    if (install.prompt) {
+      // Android / Chrome: el navegador ofrece su propio diálogo
+      install.text.textContent = 'Instálalo y ábrelo desde tu pantalla de inicio, como una app.';
+      install.go.hidden = false;
+    } else if ('standalone' in navigator) {
+      // Safari en iPhone/iPad: no hay diálogo, se explica el gesto
+      install.text.textContent = 'Toca Compartir y luego "Agregar a inicio". Ahí entras una vez y queda abierta.';
+      install.go.hidden = true;
+    } else return;
+    install.card.hidden = false;
+  }
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    install.prompt = e;
+    showInstall();
+  });
+  window.addEventListener('appinstalled', () => { install.card.hidden = true; });
+  install.go.addEventListener('click', async () => {
+    if (!install.prompt) return;
+    install.prompt.prompt();
+    const { outcome } = await install.prompt.userChoice;
+    install.prompt = null;
+    if (outcome === 'accepted') install.card.hidden = true;
+  });
+  $('[data-install-close]').addEventListener('click', () => {
+    install.card.hidden = true;
+    try { localStorage.setItem(INSTALL_KEY, '1'); } catch { /* modo privado */ }
+  });
+
+  // Service worker: solo en el panel real (/admin/), no en el simulador de dev/
+  if ('serviceWorker' in navigator && /\/admin\/(index\.html)?$/.test(location.pathname)) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
 
   // Lo que comparte el editor
   window.BagAdmin = {

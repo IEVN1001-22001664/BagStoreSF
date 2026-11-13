@@ -1,0 +1,22 @@
+{
+  "id": "/admin/",
+  "name": "Mi tienda · BAG STORE SF",
+  "short_name": "Mi tienda",
+  "description": "Panel para editar el catálogo de BAG STORE SF: piezas, fotos y disponibilidad.",
+  "lang": "es-MX",
+  "start_url": "/admin/#piezas",
+  "scope": "/admin/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fbf8f4",
+  "theme_color": "#fbf8f4",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Nueva pieza", "url": "/admin/#nueva", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Datos de la tienda", "url": "/admin/#tienda", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

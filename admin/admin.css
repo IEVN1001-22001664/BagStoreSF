@@ -412,3 +412,17 @@ body.admin { min-height: 100dvh; overscroll-behavior-y: none; }
 .action-sheet__select { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px 8px 16px; border-top: 1px solid var(--line); font-weight: 600; }
 .action-sheet__select > span:first-child { flex: none; }
 .action-sheet__select .select { flex: 1; min-width: 0; max-width: 220px; }
+
+/* ---------- Aviso para instalar el panel ---------- */
+
+.install-card {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 4px 12px; align-items: center;
+  margin-bottom: 14px; padding: 12px 8px 12px 12px;
+  border-radius: var(--radius); background: var(--lavender-soft);
+}
+.install-card__icon { width: 44px; height: 44px; border-radius: 12px; }
+.install-card__text { margin: 0; font-size: 14px; line-height: 1.4; color: var(--ink-soft); }
+.install-card__text strong { display: block; color: var(--plum-deep); font-size: 15px; }
+.install-card__close { color: var(--plum-deep); }
+.install-card__close svg { width: 20px; height: 20px; }
+.install-card__go { grid-column: 2 / 3; justify-self: start; min-height: 40px; padding: 0 18px; margin-top: 6px; font-size: 14px; }
