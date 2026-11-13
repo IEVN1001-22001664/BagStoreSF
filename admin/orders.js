@@ -125,7 +125,15 @@
       <div class="admin-main editor">${inner}</div>${footer}`;
   }
 
+  let store = null; // nombre y dirección para los mensajes
+  async function loadStore() {
+    if (store) return store;
+    try { store = await api.getStore(); } catch { store = null; }
+    return store;
+  }
+
   async function open(id) {
+    loadStore().then(() => { if (current) render(); });
     current = null;
     qty = new Map();
     view.innerHTML = shell('Pedido', '<p class="admin-status">Cargando pedido…</p>');
@@ -201,6 +209,7 @@
         ${unpriced && editable ? '<p class="editor-card__hint">Hay piezas sin precio: cóbralas aparte con el precio que acuerden.</p>' : ''}
         ${short ? '<p class="order-warn" role="alert">Una pieza no alcanza en el inventario. Bájala a lo que hay o ajusta la disponibilidad en Piezas.</p>' : ''}
       </section>
+      ${messagesHTML(o)}
       ${editable ? `<section class="editor-card editor-card--danger">
         <h2 class="editor-card__title">Cancelar pedido</h2>
         <p class="editor-card__hint">Si la clienta ya no vendrá. No cambia el inventario.</p>
@@ -212,6 +221,82 @@
         <button class="button button--primary" type="button" data-order-pay>Pagado y entregado</button>
       </div></div>` : '';
     view.innerHTML = shell(o.code, inner, footer);
+  }
+
+  /* ---------- Mensajes para la clienta (copiar o compartir a WhatsApp) ---------- */
+  const fmtDate = (iso) => new Date(iso).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+  function itemsText(list) {
+    return list.map((i) => `• ${i.qty > 1 ? `${i.qty} × ` : ''}${i.name}${i.colorName ? ` (${i.colorName})` : ''}${i.price ? ` — ${money.format(i.price * i.qty)}` : ''}`).join('\n');
+  }
+  function templates(o) {
+    const hi = `¡Hola${o.customerName ? ` ${o.customerName.split(' ')[0]}` : ''}! 💜`;
+    const where = store?.address ? `\n📍 ${store.address}${store.maps_url ? `\n${store.maps_url}` : ''}` : '';
+    const total = totalLabel(o.total, o.hasUnpriced);
+    const unavailable = o.items.filter((i) => i.colorExists === false || (i.stockNow !== null && i.stockNow < i.qty));
+    const available = o.items.filter((i) => !unavailable.includes(i));
+    const t = [];
+    if (o.status === 'pending' || o.status === 'expired') {
+      if (o.status === 'expired') {
+        // vencido: solo el aviso de vencimiento (más abajo)
+      } else if (!unavailable.length) {
+        t.push({ id: 'confirm', label: 'Confirmar pedido', text:
+          `${hi} Tu pedido *${o.code}* está confirmado ✅\n\n${itemsText(o.items)}\n\n*Total: ${total}*\nTe lo guardamos hasta el ${fmtDate(o.expiresAt)}.${where}\n\nAl llegar muestra tu código o el QR y pagas en tienda. ¡Te esperamos!` });
+      } else {
+        t.push({ id: 'short', label: 'Avisar que algo se agotó', text:
+          `${hi} Gracias por tu pedido *${o.code}*. Una disculpa: ${unavailable.length === 1 ? 'esta pieza ya no está disponible' : 'estas piezas ya no están disponibles'}:\n${itemsText(unavailable)}\n\n${available.length ? `Sí tenemos:\n${itemsText(available)}\n\n¿Te lo apartamos así o prefieres que te mostremos algo parecido?` : '¿Te mostramos algo parecido?'}` });
+      }
+      if (o.status === 'pending') {
+        t.push({ id: 'remind', label: 'Recordatorio', text:
+          `${hi} Te recordamos que tu pedido *${o.code}* (${total}) te espera hasta el ${fmtDate(o.expiresAt)}.${where}\n\n¿Cuándo pasas por él? 🛍️` });
+      } else {
+        t.push({ id: 'expired', label: 'Pedido vencido', text:
+          `${hi} Tu pedido *${o.code}* venció el ${fmtDate(o.expiresAt)}. Si todavía lo quieres, dinos y revisamos que todo siga disponible para apartártelo de nuevo.` });
+      }
+    }
+    if (o.status === 'paid') {
+      t.push({ id: 'thanks', label: 'Gracias por tu compra', text:
+        `${hi} ¡Gracias por tu compra! 🛍️ Tu pedido *${o.code}* quedó pagado y entregado.\n\nNos encantará verte de nuevo. Mira lo nuevo en el catálogo: ${new URL('../', location.href).href}` });
+    }
+    if (o.status === 'cancelled') {
+      t.push({ id: 'cancelled', label: 'Pedido cancelado', text:
+        `${hi} Cancelamos tu pedido *${o.code}*. Si quieres armar otro, aquí está el catálogo: ${new URL('../', location.href).href}` });
+    }
+    return t;
+  }
+
+  function messagesHTML(o) {
+    const list = templates(o);
+    if (!list.length) return '';
+    return `<section class="editor-card">
+      <h2 class="editor-card__title">Mensajes para la clienta</h2>
+      <p class="editor-card__hint">Toca "Enviar" y elige su chat de WhatsApp, o cópialo y pégalo en la conversación.</p>
+      <div class="msg-list">${list.map((m) => `<details class="msg" data-msg="${m.id}">
+        <summary>${e(m.label)}</summary>
+        <p class="msg__text">${e(m.text)}</p>
+        <div class="msg__actions">
+          <button class="button button--primary" type="button" data-msg-share="${m.id}">Enviar…</button>
+          <button class="button button--ghost" type="button" data-msg-copy="${m.id}">Copiar</button>
+        </div>
+      </details>`).join('')}</div>
+    </section>`;
+  }
+
+  async function sendMessage(id, mode) {
+    const m = current && templates(current).find((x) => x.id === id);
+    if (!m) return;
+    if (mode === 'share' && navigator.share) {
+      try { await navigator.share({ text: m.text }); return; } catch (err) { if (err?.name === 'AbortError') return; }
+    }
+    try {
+      await navigator.clipboard.writeText(m.text);
+      toast('Copiado. Pégalo en el chat de la clienta.');
+    } catch {
+      // Sin portapapeles: se selecciona el texto para copiarlo a mano
+      const p = view.querySelector(`[data-msg="${id}"] .msg__text`);
+      const r = document.createRange(); r.selectNodeContents(p);
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      toast('Mantén presionado el texto para copiarlo.');
+    }
   }
 
   async function pay() {
@@ -266,6 +351,10 @@
       view.querySelector(`[data-item="${CSS.escape(id)}"] [data-oqty="${b.dataset.oqty}"]:not(:disabled)`)?.focus({ preventScroll: true });
       return;
     }
+    const share = ev.target.closest('[data-msg-share]');
+    if (share) return sendMessage(share.dataset.msgShare, 'share');
+    const copy = ev.target.closest('[data-msg-copy]');
+    if (copy) return sendMessage(copy.dataset.msgCopy, 'copy');
     if (ev.target.closest('[data-order-pay]')) return pay();
     if (ev.target.closest('[data-order-cancel]')) return cancel();
   });

@@ -25,6 +25,7 @@ Migrado desde una tienda Kyte. El dueño del proyecto escribe en español: respo
 | `assets/js/cart.js` | Carrito (localStorage), crea el pedido con `rpc/create_order`, pantalla del pedido con QR, "Mis pedidos", ruta `#pedido/<uuid>` |
 | `assets/css/styles.css` | Tokens en `:root`, componentes y la regla de menos movimiento al final |
 | `assets/img/products/` | `NN-slug-K.webp` (máx. 1000px) y `NN-slug-K-sm.webp` (460px) para la cuadrícula |
+| `docs/` | Guías para la tienda (no se publica): `whatsapp-respuestas.md` |
 | `dev/` | Solo desarrollo, excluido de Vercel: break-ui (`break-ui.html`), el panel con Supabase simulado (`admin.html`) y el catálogo con carrito simulado (`catalogo.html`) |
 | `supabase/` | Migración a Supabase (en curso): esquema, RLS, bucket de fotos y `seed.sql` generado desde `catalog.js`. Ver `supabase/README.md`. Excluido de Vercel |
 
@@ -62,6 +63,10 @@ puede cobrar); solo nombre opcional; máximo 10 piezas; freno de 30 pedidos por 
 código con formato fijo y fecha de cada estado (`created_at`, `paid_at`, `cancelled_at`).
 El carrito solo aparece si hay WhatsApp y los datos traen `colors` (Supabase); con `catalog.js` de respaldo se oculta.
 En iPhone el QR abre Safari, no la app instalada: la dueña debe iniciar sesión también en Safari, o buscar el código.
+El detalle del pedido trae **Mensajes para la clienta** (confirmar, algo se agotó, recordatorio, vencido, gracias,
+cancelado) con código, piezas, total, fecha y dirección; se envían con `navigator.share` o se copian.
+Respuestas automáticas de WhatsApp Business (bienvenida, ausencia, atajos, etiquetas): `docs/whatsapp-respuestas.md`
+(excluido de Vercel). Número de prueba actual en `store.whatsapp`: 522206257291.
 
 ## Diseño
 

@@ -485,3 +485,18 @@ body.admin { min-height: 100dvh; overscroll-behavior-y: none; }
 
 @media (hover: hover) and (pointer: fine) { .order-card:hover { border-color: var(--line-strong); } }
 @media (prefers-reduced-motion: reduce) { .order-card { transition: border-color 160ms ease; } .order-card:active { transform: none; } }
+
+/* Mensajes para la clienta */
+.msg-list { display: grid; gap: 8px; }
+.msg { border-radius: 14px; background: var(--cream); border: 1px solid var(--line); }
+.msg summary {
+  display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 0 14px;
+  font-weight: 700; cursor: pointer; list-style: none; -webkit-user-select: none; user-select: none;
+}
+.msg summary::-webkit-details-marker { display: none; }
+.msg summary::after { content: ""; width: 8px; height: 8px; border-right: 1.8px solid var(--ink-soft); border-bottom: 1.8px solid var(--ink-soft); transform: rotate(45deg) translateY(-2px); transition: transform 160ms var(--ease-out); }
+.msg[open] summary::after { transform: rotate(-135deg) translateY(-2px); }
+.msg__text { margin: 0 14px; padding: 12px 14px; border-radius: 12px; background: var(--paper); font-size: 14px; line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; -webkit-user-select: text; user-select: text; }
+.msg__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 14px 14px; }
+.msg__actions .button { min-height: 44px; }
+@media (prefers-reduced-motion: reduce) { .msg summary::after { transition: none; } }
