@@ -2,10 +2,10 @@
 (() => {
   'use strict';
 
-  const { store, products } = window.BAGSTORE;
+  let store, products; // llegan de data.js (Supabase, copia guardada o catalog.js)
   const $ = (sel, root = document) => root.querySelector(sel);
 
-  const CATEGORIES = [
+  let CATEGORIES = [
     { id: 'all', label: 'Todo' },
     { id: 'crossbody', label: 'Crossbody' },
     { id: 'hombro', label: 'Hombro y Tote' },
@@ -18,10 +18,12 @@
   const MARQUEE = ['Steve Madden', 'Guess', 'Tommy Hilfiger', 'Bebe', 'Piezas originales', 'San Felipe, Gto.'];
   const FAV_KEY = 'bagstore:favs';
 
-  const currency = store.currency || 'MXN';
-  const moneyInt = new Intl.NumberFormat('es-MX', { style: 'currency', currency, maximumFractionDigits: 0 });
-  const moneyDec = new Intl.NumberFormat('es-MX', { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const money = { format: (n) => (Number.isInteger(n) ? moneyInt : moneyDec).format(n) };
+  let money;
+  function setupMoney(currency = 'MXN') {
+    const moneyInt = new Intl.NumberFormat('es-MX', { style: 'currency', currency, maximumFractionDigits: 0 });
+    const moneyDec = new Intl.NumberFormat('es-MX', { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    money = { format: (n) => (Number.isInteger(n) ? moneyInt : moneyDec).format(n) };
+  }
   const hasPrice = (p) => typeof p.price === 'number' && Number.isFinite(p.price) && p.price > 0;
   const priceLabel = (p) => (hasPrice(p) ? money.format(p.price) : 'Consultar precio');
   const isSoldOut = (p) => p.stock === 0;
@@ -239,9 +241,9 @@
   }
 
   /* ---------- Ficha de producto ---------- */
-  const CAT_LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
   function catLabel(id) {
-    if (CAT_LABEL[id]) return CAT_LABEL[id];
+    const known = CATEGORIES.find((c) => c.id === id);
+    if (known) return known.label;
     const t = String(id || 'Accesorios').replace(/[-_]+/g, ' ');
     return t.charAt(0).toUpperCase() + t.slice(1);
   }
@@ -271,6 +273,7 @@
           <li>${escapeHTML(catLabel(p.category))}</li>
           <li>Ref. #${p.ref}</li>
         </ul>
+        ${p.description ? `<p class="detail__desc">${escapeHTML(p.description)}</p>` : ''}
         <p class="detail__note">${soldOut
           ? 'Esta pieza ya encontró dueña. Escríbenos y te avisamos si vuelve a llegar o te mostramos algo parecido.'
           : `Original y lista para estrenar. Visítanos en ${escapeHTML(store.address)} o apártala antes de que alguien más se enamore.`}</p>
@@ -451,11 +454,23 @@
     else if (els.sheet.open) closeSheet({ instant: true });
   }
 
-  renderStatic();
-  renderChips();
-  renderGrid();
-  updateFavCount(false);
-  bind();
-  setupDrag();
-  fromHash();
+  function boot(data) {
+    store = data.store;
+    products = data.products;
+    if (Array.isArray(data.categories) && data.categories.length) {
+      CATEGORIES = [{ id: 'all', label: 'Todo' }, ...data.categories];
+    }
+    setupMoney(store.currency || 'MXN');
+    document.documentElement.dataset.catalogSource = data.source || 'bundled';
+    els.grid.removeAttribute('aria-busy');
+    renderStatic();
+    renderChips();
+    renderGrid();
+    updateFavCount(false);
+    bind();
+    setupDrag();
+    fromHash();
+  }
+
+  (window.BAGSTORE_READY || Promise.resolve(window.BAGSTORE)).then(boot);
 })();

@@ -399,6 +399,13 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 
 .card { position: relative; }
 
+/* Tarjetas de carga mientras llega el catálogo: solo opacidad */
+.card--skeleton { pointer-events: none; animation: skeleton-pulse 1.4s ease-in-out infinite alternate; }
+.card--skeleton .card__media { box-shadow: none; }
+.skeleton-line { display: block; height: 12px; margin-top: 14px; border-radius: 6px; background: var(--lavender-soft); }
+.skeleton-line--short { width: 45%; margin-top: 8px; }
+@keyframes skeleton-pulse { from { opacity: 1; } to { opacity: 0.45; } }
+
 /* Entrada al aparecer en pantalla, escalonada y corta */
 .card.is-pending { opacity: 0; transform: translateY(14px); }
 .card.is-in {
@@ -659,7 +666,9 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 }
 .detail__tags li.is-hot { background: var(--blush); border-color: transparent; color: #8a2450; }
 .detail__tags li.is-out { background: var(--ink); border-color: transparent; color: var(--paper); }
+.detail__desc { margin: 20px 0 0; color: var(--ink); font-size: 15px; white-space: pre-line; overflow-wrap: anywhere; }
 .detail__note { margin: 20px 0 0; color: var(--ink-soft); font-size: 15px; }
+.detail__desc + .detail__note { margin-top: 12px; }
 .detail__actions { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 24px; }
 @media (min-width: 860px) { .detail__actions { margin-top: auto; padding-top: 28px; } }
 .detail__actions .icon-button { width: 48px; height: 48px; border: 1px solid var(--line-strong); }
@@ -685,6 +694,7 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .marquee__track { animation: none; }
+  .card--skeleton { animation: none; opacity: 0.7; }
   .hero__card, .hero__tag { transition: opacity 300ms ease; }
   .card.is-pending { transform: none; }
   .card.is-in { transition: opacity 300ms ease; transition-delay: 0ms; }

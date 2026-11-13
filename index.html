@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
   <title>BAG STORE SF · Catálogo</title>
   <meta name="description" content="Catálogo virtual de BAG STORE SF: bolsas, carteras y accesorios Steve Madden, Guess y más en San Felipe, Gto." />
+  <link rel="preconnect" href="https://xspwkmkqeyzbuirjpytp.supabase.co" crossorigin />
   <meta name="color-scheme" content="light" />
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fbf8f4" />
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#fbf8f4" />
@@ -83,7 +84,14 @@
         <div class="chips" role="tablist" aria-label="Categorías" data-chips></div>
       </div>
 
-      <ul class="grid" data-grid></ul>
+      <ul class="grid" data-grid aria-busy="true">
+        <li class="card card--skeleton" aria-hidden="true"><span class="card__media"></span><span class="skeleton-line"></span><span class="skeleton-line skeleton-line--short"></span></li>
+        <li class="card card--skeleton" aria-hidden="true"><span class="card__media"></span><span class="skeleton-line"></span><span class="skeleton-line skeleton-line--short"></span></li>
+        <li class="card card--skeleton" aria-hidden="true"><span class="card__media"></span><span class="skeleton-line"></span><span class="skeleton-line skeleton-line--short"></span></li>
+        <li class="card card--skeleton" aria-hidden="true"><span class="card__media"></span><span class="skeleton-line"></span><span class="skeleton-line skeleton-line--short"></span></li>
+        <li class="card card--skeleton" aria-hidden="true"><span class="card__media"></span><span class="skeleton-line"></span><span class="skeleton-line skeleton-line--short"></span></li>
+        <li class="card card--skeleton" aria-hidden="true"><span class="card__media"></span><span class="skeleton-line"></span><span class="skeleton-line skeleton-line--short"></span></li>
+      </ul>
       <div class="more"><button class="button button--ghost" type="button" data-more hidden></button></div>
 
       <div class="empty" data-empty hidden>
@@ -121,6 +129,7 @@
   <div class="toast" data-toast role="status" aria-live="polite"></div>
 
   <script src="assets/data/catalog.js"></script>
+  <script src="assets/js/data.js"></script>
   <script src="assets/js/app.js"></script>
 </body>
 </html>
