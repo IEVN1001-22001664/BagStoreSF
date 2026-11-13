@@ -1,0 +1,20 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Panel simulado · BAG STORE SF</title>
+<script>
+/* Carga el admin/index.html real con un Supabase simulado (dev/admin-mock.js).
+   Estados: ?state=ok | denied | savefail | offline | empty | slow */
+(async () => {
+  const CLOSE = '<' + '/script>';
+  const html = await (await fetch('../admin/index.html')).text();
+  const configTag = '<script src="../assets/js/config.js">' + CLOSE;
+  // Empieza sin sesión. Si la simulada queda guardada, el /admin/ real la descarta al no poder renovarla.
+  try { localStorage.removeItem('bagstore:admin-session'); } catch {}
+  const patched = html
+    .replace('<head>', '<head><base href="../admin/" />')
+    .replace(configTag, configTag + '<script src="../assets/data/catalog.js">' + CLOSE + '<script src="../dev/admin-mock.js">' + CLOSE);
+  document.open();
+  document.write(patched);
+  document.close();
+})();
+</script>

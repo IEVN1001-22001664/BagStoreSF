@@ -16,20 +16,22 @@ Migrado desde una tienda Kyte. El dueño del proyecto escribe en español: respo
 
 | Archivo | Qué contiene |
 | --- | --- |
+| `assets/js/config.js` | URL de Supabase y clave publicable (la usan el catálogo y el panel) |
+| `admin/` | Panel en `/admin/`: `api.js` (cliente REST y sesión, sin SDK), `admin.js` (lista de piezas con − n + por color, guardado automático), `admin.css` |
 | `assets/js/data.js` | Carga el catálogo: Supabase (`rpc/catalog`) → copia en localStorage → `catalog.js`. Expone `window.BAGSTORE_READY` |
 | `assets/data/catalog.js` | **Respaldo** (ya no es la fuente de verdad): `window.BAGSTORE = { store, products }` con los 40 productos de la migración |
 | `assets/js/app.js` | Filtros, búsqueda, favoritos (localStorage), ficha de producto, paginación de 24, enlaces `#producto-NN` |
 | `assets/css/styles.css` | Tokens en `:root`, componentes y la regla de menos movimiento al final |
 | `assets/img/products/` | `NN-slug-K.webp` (máx. 1000px) y `NN-slug-K-sm.webp` (460px) para la cuadrícula |
-| `dev/` | Selector break-ui (solo desarrollo, excluido de Vercel con `.vercelignore`) |
+| `dev/` | Solo desarrollo, excluido de Vercel: break-ui (`break-ui.html`) y el panel con Supabase simulado (`admin.html`) |
 | `supabase/` | Migración a Supabase (en curso): esquema, RLS, bucket de fotos y `seed.sql` generado desde `catalog.js`. Ver `supabase/README.md`. Excluido de Vercel |
 
 ### Migración a Supabase (en curso)
 
-Plan acordado: Supabase (Postgres + Storage + Auth por enlace mágico) usado con `fetch` directo, sin SDK ni build.
+Plan acordado: Supabase (Postgres + Storage + Auth con correo y contraseña) usado con `fetch` directo, sin SDK ni build.
 Proyecto: `https://xspwkmkqeyzbuirjpytp.supabase.co` (la clave publicable está en `data.js`; la `service_role` nunca va al repo).
 Fases: 1) esquema y seed ✅ · 2) el catálogo lee `rpc/catalog` con `catalog.js` de respaldo ✅ · 3) `/admin` de
-disponibilidad · 4) edición completa y fotos (redimensionar a WebP en el navegador) · 5) PWA y prueba en teléfono.
+disponibilidad ✅ · 4) edición completa y fotos (redimensionar a WebP en el navegador) · 5) PWA y prueba en teléfono.
 Cada pieza tiene colores (`product_colors`) con su propio stock; el stock de la pieza es la suma (o `null`).
 Los datos ahora se editan en Supabase. No regeneres ni vuelvas a correr `seed.sql`: borra todos los productos y los recarga desde `catalog.js`.
 break-ui no consulta la red (`data.js` detecta `window.__BREAKUI_KEY`) y sigue usando `dev/fixtures.js`.
@@ -65,6 +67,10 @@ Skills que el usuario pidió usar en el frontend: **emil-design-eng** y **mobile
   todos los estados a 320px y 1440px y confirma que no haya errores en la consola ni scroll horizontal.
 - Playwright y Chromium sirven para capturas. Los ajustes de mobile-native (hover pegado, notch, teclado, zoom)
   solo se confirman en un teléfono real.
+
+- **Panel:** `http://localhost:4173/dev/admin.html?state=ok` usa `admin/index.html` real con Supabase simulado
+  (`dev/admin-mock.js`). Estados: `ok | denied | savefail | offline | empty | slow`. Contraseña `incorrecta` simula
+  error de acceso; cualquier otra entra. No uses la cuenta real de la dueña para probar.
 
 ## Origen de los datos (Kyte)
 

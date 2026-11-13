@@ -4,9 +4,7 @@
 (() => {
   'use strict';
 
-  const SUPABASE_URL = 'https://xspwkmkqeyzbuirjpytp.supabase.co';
-  // Clave publicable: es pública por diseño; las reglas RLS de la base protegen los datos.
-  const SUPABASE_KEY = 'sb_publishable_G3L7tZ7U_Zk-eFhl-gBSEg_4CRjCd3B';
+  const { supabaseUrl: SUPABASE_URL, supabaseKey: SUPABASE_KEY } = window.BAGSTORE_CONFIG || {};
   const CACHE_KEY = 'bagstore:catalog:v1';
   const TIMEOUT_MS = 5000;
 
@@ -24,7 +22,7 @@
   }
 
   // break-ui prueba datos locales: no se consulta la red
-  if (window.__BREAKUI_KEY) {
+  if (window.__BREAKUI_KEY || !SUPABASE_URL) {
     window.BAGSTORE_READY = Promise.resolve({ ...bundled, source: 'local' });
     return;
   }

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+  <title>Panel · BAG STORE SF</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="color-scheme" content="light" />
+  <meta name="theme-color" content="#fbf8f4" />
+  <link rel="icon" href="../assets/img/brand/logo.webp" type="image/webp" />
+  <link rel="apple-touch-icon" href="../assets/img/brand/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://xspwkmkqeyzbuirjpytp.supabase.co" crossorigin />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/css/styles.css" />
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body class="admin">
+
+  <!-- Acceso -->
+  <main class="login" data-view="login" hidden>
+    <form class="login__card" data-login novalidate>
+      <img class="login__logo" src="../assets/img/brand/logo.webp" alt="" width="72" height="72" />
+      <p class="eyebrow">Bag Store SF</p>
+      <h1 class="login__title">Panel de la tienda</h1>
+      <label class="field">
+        <span class="field__label">Correo</span>
+        <input type="email" name="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" enterkeyhint="next" required />
+      </label>
+      <label class="field">
+        <span class="field__label">Contraseña</span>
+        <span class="field__password">
+          <input type="password" name="password" autocomplete="current-password" enterkeyhint="go" required />
+          <button class="field__reveal" type="button" data-reveal aria-pressed="false">Ver</button>
+        </span>
+      </label>
+      <p class="login__error" data-login-error role="alert"></p>
+      <button class="button button--primary login__submit" type="submit" data-login-submit>Entrar</button>
+      <a class="login__back" href="../">Ir al catálogo</a>
+    </form>
+  </main>
+
+  <!-- Sin permiso -->
+  <main class="login" data-view="denied" hidden>
+    <div class="login__card">
+      <img class="login__logo" src="../assets/img/brand/logo.webp" alt="" width="72" height="72" />
+      <h1 class="login__title">Esta cuenta no puede editar</h1>
+      <p class="login__text"><strong data-denied-email></strong> entró bien, pero no está en la lista de administradoras de la tienda.</p>
+      <button class="button button--ghost login__submit" type="button" data-signout>Salir</button>
+    </div>
+  </main>
+
+  <!-- Panel -->
+  <div data-view="panel" hidden>
+    <header class="admin-header">
+      <div class="admin-header__inner">
+        <a class="brand" href="../" aria-label="Ver el catálogo">
+          <img class="brand__logo" src="../assets/img/brand/logo.webp" alt="" width="36" height="36" />
+          <span class="admin-header__title">Disponibilidad</span>
+        </a>
+        <div class="admin-header__actions">
+          <button class="icon-button" type="button" data-reload aria-label="Actualizar la lista">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v4.5h-4.5"/></svg>
+          </button>
+          <button class="button button--ghost admin-header__out" type="button" data-signout>Salir</button>
+        </div>
+      </div>
+      <div class="admin-tools">
+        <label class="search">
+          <span class="sr-only">Buscar pieza</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
+          <input type="search" placeholder="Buscar por nombre, marca o #" data-search autocomplete="off" enterkeyhint="search" />
+        </label>
+        <div class="chips admin-filters" role="tablist" aria-label="Filtrar por disponibilidad" data-filters></div>
+      </div>
+    </header>
+
+    <main class="admin-main">
+      <p class="admin-status" data-list-status aria-live="polite"></p>
+      <ul class="stock-list" data-list></ul>
+      <div class="empty" data-list-empty hidden>
+        <p class="empty__title">Nada por aquí.</p>
+        <p data-list-empty-text>Prueba con otra búsqueda o filtro.</p>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" data-toast role="status" aria-live="polite"></div>
+
+  <script src="../assets/js/config.js"></script>
+  <script src="api.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
