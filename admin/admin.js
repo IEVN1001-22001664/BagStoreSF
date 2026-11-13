@@ -58,6 +58,8 @@
   };
 
   const state = { products: [], categories: [], filter: 'all', query: '', loadedAt: 0, loading: false, admin: false };
+  const ORDERS = !!window.BAGSTORE_CONFIG?.orders; // false: la pestaña Pedidos se oculta (ver assets/js/config.js)
+  if (!ORDERS) document.querySelector('[data-tab="orders"]')?.setAttribute('hidden', '');
   const colorIndex = new Map(); // colorId → { product, color }
   const saves = new Map();      // colorId → { timer, inFlight, saved, local }
 
@@ -139,7 +141,7 @@
     }
     state.admin = true;
     showInstall();
-    window.BagOrders?.refreshBadge();
+    if (ORDERS) window.BagOrders?.refreshBadge();
     await route();
     load();
     loadCategories();
@@ -162,7 +164,7 @@
       await window.BagEditor.open(m ? m[1] : null);
     } else {
       show('panel');
-      const tab = h === '#tienda' ? 'store' : h === '#pedidos' ? 'orders' : 'list';
+      const tab = h === '#tienda' ? 'store' : h === '#pedidos' && ORDERS ? 'orders' : 'list';
       for (const [k, el] of Object.entries(els.sections)) el.hidden = k !== tab;
       els.tools.hidden = tab !== 'list';
       if (tab === 'orders') window.BagOrders.loadList();

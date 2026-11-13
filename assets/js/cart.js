@@ -9,7 +9,7 @@
   const ORDERS_KEY = 'bagstore:orders';
   const MAX_PIECES = 10;
   const QR_SRC = 'assets/vendor/qrcode-generator-1.4.4.js';
-  const { supabaseUrl: URL_, supabaseKey: KEY } = window.BAGSTORE_CONFIG || {};
+  const { supabaseUrl: URL_, supabaseKey: KEY, orders: ORDERS = false } = window.BAGSTORE_CONFIG || {};
   const $ = (sel, root = document) => root.querySelector(sel);
 
   const dialog = $('[data-cart]');
@@ -22,6 +22,7 @@
   let items = read(CART_KEY, []);   // [{ color, qty }]
   let view = 'cart';      // 'cart' | 'order'
   let busy = false;
+  let sent = false;       // ya se abrió WhatsApp con la lista (modo directo)
 
   function read(key, fallback) {
     try { const v = JSON.parse(localStorage.getItem(key)); return Array.isArray(v) ? v : fallback; } catch { return fallback; }
@@ -150,7 +151,7 @@
     if (view !== 'cart') return;
     const e = C.escapeHTML;
     const ls = lines();
-    const saved = read(ORDERS_KEY, []);
+    const saved = ORDERS ? read(ORDERS_KEY, []) : [];
     const myOrders = saved.length ? `<div class="cart__orders">
         <p class="detail__label">Mis pedidos</p>
         <ul>${saved.slice(0, 5).map((o) => `<li><a href="#pedido/${e(o.id)}">${e(o.code)}<span>${new Date(o.createdAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}</span></a></li>`).join('')}</ul>
@@ -161,7 +162,7 @@
         <h2 class="cart__title" id="cart-title">Tu carrito</h2>
         <div class="cart__empty">
           <p class="empty__title">Todavía está vacío.</p>
-          <p>Abre una pieza y toca "Agregar al carrito". Luego la apartas por WhatsApp y la pagas en tienda.</p>
+          <p>${ORDERS ? 'Abre una pieza y toca "Agregar al carrito". Luego la apartas por WhatsApp y la pagas en tienda.' : 'Abre una pieza y toca "Agregar al carrito". Cuando estés lista, nos mandas tu lista por WhatsApp y te atendemos ahí.'}</p>
           <button class="button button--primary" type="button" data-cart-close>Ver catálogo</button>
         </div>
         ${myOrders}
@@ -198,17 +199,41 @@
         <strong>${C.money.format(total)}${unpriced ? '<small> + piezas con precio por confirmar</small>' : ''}</strong>
       </div>
 
-      <label class="cart__name">
+      ${ORDERS ? `<label class="cart__name">
         <span class="detail__label">Tu nombre <span class="cart__optional">(opcional)</span></span>
         <input data-cart-name maxlength="60" autocomplete="given-name" autocapitalize="words" enterkeyhint="send" placeholder="Para saber de quién es el pedido" />
       </label>
 
       <p class="cart__error" data-cart-error role="alert"></p>
       <button class="button button--primary cart__submit" type="button" data-cart-submit>Apartar por WhatsApp</button>
-      <p class="cart__fine">Pagas en tienda. Te guardamos el pedido 7 días y te confirmamos por WhatsApp que todo siga disponible.</p>
+      <p class="cart__fine">Pagas en tienda. Te guardamos el pedido 7 días y te confirmamos por WhatsApp que todo siga disponible.</p>`
+      : `<a class="button button--primary cart__submit" href="${e(waInterest(ls))}" target="_blank" rel="noopener" data-cart-send>
+          <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 18.8z"/></svg>
+          Enviar por WhatsApp</a>
+        ${sent ? `<div class="cart__sent" role="status">
+            <p>¿Ya enviaste tu lista? Te respondemos por ahí. 💜</p>
+            <button class="button button--ghost" type="button" data-cart-clear>Vaciar carrito</button>
+          </div>`
+        : '<p class="cart__fine">Te respondemos por WhatsApp para confirmar disponibilidad y si lo quieres con envío o para recoger en tienda.</p>'}`}
       ${myOrders}
     </div>`;
-    try { $('[data-cart-name]', body).value = localStorage.getItem('bagstore:name') || ''; } catch { /* sin almacenamiento */ }
+    const nameInput = $('[data-cart-name]', body);
+    if (nameInput) try { nameInput.value = localStorage.getItem('bagstore:name') || ''; } catch { /* sin almacenamiento */ }
+  }
+
+  // Modo directo: "Me interesan estas piezas…" listo para mandar a la tienda
+  function waInterest(ls) {
+    const { total, unpriced } = totals(ls);
+    const one = ls.length === 1 && ls[0].qty === 1;
+    const lines = ls.map((l) => `• ${l.qty > 1 ? `${l.qty} × ` : ''}#${l.p.ref} ${l.p.name}${l.c.name ? ` (${l.c.name})` : ''} — ${C.hasPrice(l.p) ? C.money.format(l.p.price * l.qty) : 'consultar precio'}`);
+    const text = [
+      `¡Hola! 💜 ${one ? 'Me interesa esta pieza' : 'Me interesan estas piezas'} del catálogo:`,
+      ...lines,
+      ls.length > 1 || ls[0].qty > 1 ? `Total: ${C.money.format(total)}${unpriced ? ' + piezas por consultar' : ''}` : '',
+      '',
+      one ? '¿Está disponible?' : '¿Están disponibles?',
+    ].filter((x, k) => x !== '' || k > 0).join('\n').replace(/\n{3,}/g, '\n\n');
+    return `https://wa.me/${C.store.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
   }
 
   function setQty(colorId, delta) {
@@ -216,6 +241,7 @@
     const hit = find(colorId);
     if (!it || !hit) return;
     const next = it.qty + delta;
+    sent = false;
     if (next <= 0) items = items.filter((x) => x !== it);
     else if (delta > 0 && (next > limitOf(hit.c) || pieces() >= MAX_PIECES)) return;
     else it.qty = next;
@@ -391,7 +417,22 @@
       if (e.target.closest('[data-cart-close]')) return close();
       const q = e.target.closest('[data-qty]');
       if (q && !q.disabled) return setQty(q.closest('[data-line]').dataset.line, Number(q.dataset.qty));
-      if (e.target.closest('[data-cart-submit]')) return submit();
+      if (e.target.closest('[data-cart-submit]') && ORDERS) return submit();
+      if (e.target.closest('[data-cart-send]')) {
+        // El enlace abre WhatsApp por sí solo; después se ofrece vaciar el carrito
+        setTimeout(() => { sent = true; if (dialog.open && view === 'cart') { const y = body.scrollTop; render(); body.scrollTop = y; } }, 400);
+        return;
+      }
+      if (e.target.closest('[data-cart-clear]')) {
+        items = [];
+        sent = false;
+        write(CART_KEY, items);
+        updateBadge();
+        render();
+        C.refreshSheet();
+        C.toast('Carrito vacío');
+        return;
+      }
       const link = e.target.closest('a[href^="#pedido/"]');
       if (link) { e.preventDefault(); history.replaceState(null, '', link.getAttribute('href')); openOrder(link.getAttribute('href').slice(8)); }
     });

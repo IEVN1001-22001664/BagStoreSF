@@ -22,7 +22,7 @@ Migrado desde una tienda Kyte. El dueño del proyecto escribe en español: respo
 | `assets/js/data.js` | Carga el catálogo: Supabase (`rpc/catalog`) → copia en localStorage → `catalog.js`. Expone `window.BAGSTORE_READY` |
 | `assets/data/catalog.js` | **Respaldo** (ya no es la fuente de verdad): `window.BAGSTORE = { store, products }` con los 40 productos de la migración |
 | `assets/js/app.js` | Filtros, búsqueda, favoritos (localStorage), ficha de producto con selector de color, paginación de 24, enlaces `#producto-NN` |
-| `assets/js/cart.js` | Carrito (localStorage), crea el pedido con `rpc/create_order`, pantalla del pedido con QR, "Mis pedidos", ruta `#pedido/<uuid>` |
+| `assets/js/cart.js` | Carrito (localStorage). Con `orders: false` manda la lista directo por WhatsApp; con `true` crea el pedido (`rpc/create_order`), QR, "Mis pedidos" y ruta `#pedido/<uuid>` |
 | `assets/css/styles.css` | Tokens en `:root`, componentes y la regla de menos movimiento al final |
 | `assets/img/products/` | `NN-slug-K.webp` (máx. 1000px) y `NN-slug-K-sm.webp` (460px) para la cuadrícula |
 | `docs/` | Guías para la tienda (no se publica): `whatsapp-respuestas.md` |
@@ -52,7 +52,15 @@ Reglas de datos que la UI ya maneja; no las rompas:
 - El contacto sale de `store.whatsapp` (primero) o `store.instagram`. Si ambos están vacíos, el botón lleva a Maps.
 - Con `store.instagram` lleno aparece el ícono de Instagram en el encabezado y un botón en "Visítanos" (`[data-instagram]`).
 
-### Carrito y pedidos (migración `004_pedidos.sql`)
+### Carrito (modo actual: directo a WhatsApp)
+
+A la dueña no le gustó el apartado con QR: quiere que el carrito **solo arme la lista y la mande por WhatsApp**
+("Me interesan estas piezas…", con #ref, color, precio y total) y ella acuerda envío o recoger en tienda en el chat.
+Interruptor `orders` en `assets/js/config.js`: `false` (actual) = carrito directo, sin pedidos ni QR, sin nombre, y el
+panel oculta la pestaña Pedidos; `true` = vuelve el sistema de abajo. Tras tocar "Enviar por WhatsApp" el carrito ofrece
+"Vaciar carrito". La ficha conserva "Preguntar" (WhatsApp de una pieza) junto a "Agregar al carrito".
+
+### Sistema de pedidos con QR (apagado, `orders: true`; migración `004_pedidos.sql`)
 
 Flujo: la clienta agrega piezas (eligiendo color) → "Apartar por WhatsApp" crea el pedido (`create_order`, pública,
 valida disponibilidad y toma los precios de la base) → recibe un código `BS-XXXX` y un QR → manda el pedido por WhatsApp
@@ -65,8 +73,8 @@ El carrito solo aparece si hay WhatsApp y los datos traen `colors` (Supabase); c
 En iPhone el QR abre Safari, no la app instalada: la dueña debe iniciar sesión también en Safari, o buscar el código.
 El detalle del pedido trae **Mensajes para la clienta** (confirmar, algo se agotó, recordatorio, vencido, gracias,
 cancelado) con código, piezas, total, fecha y dirección; se envían con `navigator.share` o se copian.
-Respuestas automáticas de WhatsApp Business (bienvenida, ausencia, atajos, etiquetas): `docs/whatsapp-respuestas.md`
-(excluido de Vercel). Número de prueba actual en `store.whatsapp`: 522206257291.
+Respuestas automáticas de WhatsApp Business para el modo directo (bienvenida, ausencia, atajos, etiquetas):
+`docs/whatsapp-respuestas.md` (excluido de Vercel). Número de prueba actual en `store.whatsapp`: 522206257291.
 
 ## Diseño
 

@@ -806,6 +806,13 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .cart__error:empty { display: none; }
 .cart__submit, .order__wa, .cart__back { width: 100%; margin-top: 16px; }
 .cart__submit:disabled { opacity: 0.7; }
+.cart__submit svg { flex: none; }
+.cart__sent {
+  display: grid; gap: 10px; margin-top: 14px; padding: 14px; border-radius: var(--radius-sm);
+  background: var(--lavender-soft); text-align: center; color: var(--plum-deep); font-weight: 600; font-size: 14px;
+}
+.cart__sent p { margin: 0; }
+.cart__sent .button { min-height: 44px; background: var(--paper); }
 .cart__fine { margin: 12px 0 0; font-size: 13px; line-height: 1.45; color: var(--muted); text-align: center; }
 .cart__empty { padding: 12px 0 8px; text-align: center; color: var(--ink-soft); }
 .cart__empty .button { margin-top: 18px; }
