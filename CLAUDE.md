@@ -17,7 +17,7 @@ Migrado desde una tienda Kyte. El dueño del proyecto escribe en español: respo
 | Archivo | Qué contiene |
 | --- | --- |
 | `assets/js/config.js` | URL de Supabase y clave publicable (la usan el catálogo y el panel) |
-| `admin/` | Panel en `/admin/`: `api.js` (cliente REST y sesión, sin SDK), `admin.js` (lista de piezas con − n + por color, guardado automático), `admin.css` |
+| `admin/` | Panel en `/admin/` (rutas `#piezas`, `#pieza/<uuid>`, `#nueva`, `#tienda`): `api.js` (REST, Storage y sesión, sin SDK), `admin.js` (lista con − n + y guardado automático, datos de la tienda), `editor.js` (editar/crear/eliminar pieza), `images.js` (redimensiona fotos en el navegador), `admin.css` |
 | `assets/js/data.js` | Carga el catálogo: Supabase (`rpc/catalog`) → copia en localStorage → `catalog.js`. Expone `window.BAGSTORE_READY` |
 | `assets/data/catalog.js` | **Respaldo** (ya no es la fuente de verdad): `window.BAGSTORE = { store, products }` con los 40 productos de la migración |
 | `assets/js/app.js` | Filtros, búsqueda, favoritos (localStorage), ficha de producto, paginación de 24, enlaces `#producto-NN` |
@@ -31,8 +31,10 @@ Migrado desde una tienda Kyte. El dueño del proyecto escribe en español: respo
 Plan acordado: Supabase (Postgres + Storage + Auth con correo y contraseña) usado con `fetch` directo, sin SDK ni build.
 Proyecto: `https://xspwkmkqeyzbuirjpytp.supabase.co` (la clave publicable está en `data.js`; la `service_role` nunca va al repo).
 Fases: 1) esquema y seed ✅ · 2) el catálogo lee `rpc/catalog` con `catalog.js` de respaldo ✅ · 3) `/admin` de
-disponibilidad ✅ · 4) edición completa y fotos (redimensionar a WebP en el navegador) · 5) PWA y prueba en teléfono.
+disponibilidad ✅ · 4) edición completa y fotos ✅ (requiere `003_guardar_pieza.sql`) · 5) PWA y prueba en teléfono.
 Cada pieza tiene colores (`product_colors`) con su propio stock; el stock de la pieza es la suma (o `null`).
+El editor guarda con `rpc/save_product` (todo o nada); los ids de pieza, color y foto se generan en el navegador para subir
+las fotos antes de guardar. Las categorías aún no se editan desde el panel.
 Los datos ahora se editan en Supabase. No regeneres ni vuelvas a correr `seed.sql`: borra todos los productos y los recarga desde `catalog.js`.
 break-ui no consulta la red (`data.js` detecta `window.__BREAKUI_KEY`) y sigue usando `dev/fixtures.js`.
 

@@ -11,7 +11,8 @@
   // Empieza sin sesión. Si la simulada queda guardada, el /admin/ real la descarta al no poder renovarla.
   try { localStorage.removeItem('bagstore:admin-session'); } catch {}
   const patched = html
-    .replace('<head>', '<head><base href="../admin/" />')
+    // Sin <base>: rompería los enlaces #pieza/… Las rutas ../ ya sirven desde dev/; solo se ajustan los archivos de admin/
+    .replace(/(href|src)="(admin\.css|api\.js|images\.js|admin\.js|editor\.js)"/g, '$1="../admin/$2"')
     .replace(configTag, configTag + '<script src="../assets/data/catalog.js">' + CLOSE + '<script src="../dev/admin-mock.js">' + CLOSE);
   document.open();
   document.write(patched);

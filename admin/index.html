@@ -51,22 +51,26 @@
     </div>
   </main>
 
-  <!-- Panel -->
+  <!-- Panel: lista de piezas y datos de la tienda -->
   <div data-view="panel" hidden>
     <header class="admin-header">
       <div class="admin-header__inner">
         <a class="brand" href="../" aria-label="Ver el catálogo">
           <img class="brand__logo" src="../assets/img/brand/logo.webp" alt="" width="36" height="36" />
-          <span class="admin-header__title">Disponibilidad</span>
+          <span class="admin-header__title">Mi tienda</span>
         </a>
         <div class="admin-header__actions">
-          <button class="icon-button" type="button" data-reload aria-label="Actualizar la lista">
+          <button class="icon-button" type="button" data-reload aria-label="Actualizar">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v4.5h-4.5"/></svg>
           </button>
           <button class="button button--ghost admin-header__out" type="button" data-signout>Salir</button>
         </div>
       </div>
-      <div class="admin-tools">
+      <nav class="admin-tabs" aria-label="Secciones">
+        <a class="admin-tabs__tab" href="#piezas" data-tab="list">Piezas</a>
+        <a class="admin-tabs__tab" href="#tienda" data-tab="store">Tienda</a>
+      </nav>
+      <div class="admin-tools" data-tools>
         <label class="search">
           <span class="sr-only">Buscar pieza</span>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
@@ -76,20 +80,75 @@
       </div>
     </header>
 
-    <main class="admin-main">
+    <main class="admin-main" data-section="list">
       <p class="admin-status" data-list-status aria-live="polite"></p>
       <ul class="stock-list" data-list></ul>
       <div class="empty" data-list-empty hidden>
         <p class="empty__title">Nada por aquí.</p>
         <p data-list-empty-text>Prueba con otra búsqueda o filtro.</p>
       </div>
+      <a class="button button--primary fab" href="#nueva" data-fab>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Nueva pieza
+      </a>
+    </main>
+
+    <main class="admin-main" data-section="store" hidden>
+      <form class="editor-card store-form" data-store-form novalidate>
+        <h2 class="editor-card__title">Datos de la tienda</h2>
+        <p class="editor-card__hint">Aparecen en el catálogo y en los mensajes de WhatsApp.</p>
+        <label class="field"><span class="field__label">Nombre</span>
+          <input name="name" maxlength="80" autocomplete="off" required /><span class="field__error" data-error="name"></span></label>
+        <label class="field"><span class="field__label">Frase</span>
+          <input name="tagline" maxlength="120" autocomplete="off" placeholder="Bags · Style · Elegance" /></label>
+        <label class="field"><span class="field__label">Dirección</span>
+          <input name="address" maxlength="160" autocomplete="off" /></label>
+        <label class="field"><span class="field__label">Enlace de Google Maps</span>
+          <input name="maps_url" type="url" inputmode="url" autocapitalize="none" autocorrect="off" spellcheck="false" />
+          <span class="field__hint">Ábrelo en Maps, toca Compartir y pega el enlace aquí.</span>
+          <span class="field__error" data-error="maps_url"></span></label>
+        <label class="field"><span class="field__label">WhatsApp para pedidos</span>
+          <input name="whatsapp" type="tel" inputmode="tel" autocomplete="off" placeholder="52 445 123 4567" />
+          <span class="field__hint">Con 52 al inicio. Vacío: el botón de pedir usa Instagram o Maps.</span>
+          <span class="field__error" data-error="whatsapp"></span></label>
+        <label class="field"><span class="field__label">Instagram</span>
+          <input name="instagram" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="off" placeholder="usuario, sin @" />
+          <span class="field__error" data-error="instagram"></span></label>
+        <div class="store-form__actions">
+          <span class="savebar__status" data-store-status aria-live="polite"></span>
+          <button class="button button--primary" type="submit" data-store-save>Guardar</button>
+        </div>
+      </form>
     </main>
   </div>
+
+  <!-- Editor de pieza (lo dibuja editor.js) -->
+  <div data-view="editor" hidden></div>
+
+  <!-- Acciones de una foto -->
+  <dialog class="action-sheet" data-photo-sheet aria-labelledby="photo-sheet-title">
+    <div class="action-sheet__panel">
+      <p class="action-sheet__title" id="photo-sheet-title">Foto</p>
+      <img class="action-sheet__preview" data-photo-preview alt="" />
+      <div class="action-sheet__group">
+        <button class="action-sheet__btn" type="button" data-photo-action="first">Usar como portada</button>
+        <button class="action-sheet__btn" type="button" data-photo-action="left">Mover antes</button>
+        <button class="action-sheet__btn" type="button" data-photo-action="right">Mover después</button>
+        <label class="action-sheet__select" data-photo-color-wrap>
+          <span>Color</span>
+          <span class="select"><select data-photo-color></select></span>
+        </label>
+        <button class="action-sheet__btn action-sheet__btn--danger" type="button" data-photo-action="remove">Quitar foto</button>
+      </div>
+      <button class="action-sheet__btn action-sheet__btn--cancel" type="button" data-photo-action="close" autofocus>Listo</button>
+    </div>
+  </dialog>
 
   <div class="toast" data-toast role="status" aria-live="polite"></div>
 
   <script src="../assets/js/config.js"></script>
   <script src="api.js"></script>
+  <script src="images.js"></script>
   <script src="admin.js"></script>
+  <script src="editor.js"></script>
 </body>
 </html>
