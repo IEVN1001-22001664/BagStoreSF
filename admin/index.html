@@ -132,6 +132,22 @@
           <button class="button button--primary" type="submit" data-store-save>Guardar</button>
         </div>
       </form>
+
+      <form class="editor-card cat-form" data-cat-form novalidate>
+        <h2 class="editor-card__title">Categorías</h2>
+        <p class="editor-card__hint">Son los filtros del catálogo, en este orden. Solo se muestran las que tienen piezas visibles.</p>
+        <ul class="cat-list" data-cat-list></ul>
+        <div class="cat-add">
+          <input class="cat-add__input" data-cat-new maxlength="40" autocomplete="off" enterkeyhint="done"
+            placeholder="Nueva, por ejemplo Mochilas" aria-label="Nombre de la nueva categoría" />
+          <button class="button button--lavender" type="button" data-cat-add>Agregar</button>
+        </div>
+        <span class="field__error" data-cat-error></span>
+        <div class="store-form__actions">
+          <span class="savebar__status" data-cat-status aria-live="polite"></span>
+          <button class="button button--primary" type="submit" data-cat-save>Guardar categorías</button>
+        </div>
+      </form>
     </main>
   </div>
 

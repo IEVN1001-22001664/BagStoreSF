@@ -161,7 +161,7 @@
       els.sections.store.hidden = tab !== 'store';
       els.tools.hidden = tab !== 'list';
       els.tabs.forEach((t) => (t.dataset.tab === tab ? t.setAttribute('aria-current', 'page') : t.removeAttribute('aria-current')));
-      if (tab === 'store') loadStore();
+      if (tab === 'store') { loadStore(); if (!catsDirty()) loadCats(); }
     }
     currentHash = h;
   }
@@ -214,6 +214,8 @@
       state.loadedAt = Date.now();
       setStatus('');
       render();
+      // Los contadores de "piezas" de cada categoría dependen de esta lista
+      if (cats.draft.length && !cats.list.contains(document.activeElement)) renderCats();
     } catch (err) {
       if (err.status === 401) return;
       setStatus(err.message, true);
@@ -449,6 +451,150 @@
     }
   });
 
+  /* ---------- Categorías ---------- */
+  const cats = {
+    form: $('[data-cat-form]'), list: $('[data-cat-list]'), input: $('[data-cat-new]'),
+    error: $('[data-cat-error]'), status: $('[data-cat-status]'), save: $('[data-cat-save]'),
+    draft: [], removed: [], original: '', loading: null, saving: false,
+  };
+  const ICON_UP = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>';
+  const ICON_DOWN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+  const ICON_TRASH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>';
+
+  const catSnapshot = () => JSON.stringify([cats.draft.map((c) => [c.id, c.label]), cats.removed]);
+  const catsDirty = () => !!cats.original && catSnapshot() !== cats.original;
+  const usage = (id) => state.products.filter((p) => p.category === id).length;
+
+  // "Monederos y tarjeteros" → "monederos-y-tarjeteros" (formato que exige la base)
+  function slugify(label) {
+    let id = normalize(label).trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+    if (id.length < 2) id = `cat-${Date.now().toString(36)}`;
+    const taken = new Set(cats.draft.map((c) => c.id));
+    let out = id, n = 2;
+    while (taken.has(out)) out = `${id.slice(0, 37)}-${n++}`;
+    return out;
+  }
+
+  function loadCats() {
+    if (cats.loading) return cats.loading;
+    cats.save.disabled = true;
+    cats.status.textContent = 'Cargando…';
+    cats.loading = (async () => {
+      try {
+        const rows = await api.listCategories();
+        state.categories = rows.map(({ id, label }) => ({ id, label }));
+        cats.draft = state.categories.map((c) => ({ ...c }));
+        cats.removed = [];
+        cats.original = catSnapshot();
+        renderCats();
+        cats.status.textContent = '';
+        cats.save.disabled = false;
+      } catch (err) {
+        cats.status.textContent = `${err.message} Toca ↻ para reintentar.`;
+      } finally {
+        cats.loading = null;
+      }
+    })();
+    return cats.loading;
+  }
+
+  function renderCats() {
+    const n = cats.draft.length;
+    cats.list.innerHTML = cats.draft.map((c, i) => {
+      const used = usage(c.id);
+      const count = c.isNew ? 'Nueva' : used ? `${used.toLocaleString('es-MX')} ${used === 1 ? 'pieza' : 'piezas'}` : 'Sin piezas';
+      return `<li class="cat-row" data-cat="${escapeHTML(c.id)}">
+        <input class="cat-row__name" data-cat-label value="${escapeHTML(c.label)}" maxlength="40" autocomplete="off" enterkeyhint="done" aria-label="Nombre de la categoría ${i + 1}" />
+        <div class="cat-row__bottom">
+          <span class="cat-row__count">${count}</span>
+          <span class="cat-row__actions">
+            <button class="icon-button" type="button" data-cat-move="-1" aria-label="Subir ${escapeHTML(c.label)}"${i === 0 ? ' disabled' : ''}>${ICON_UP}</button>
+            <button class="icon-button" type="button" data-cat-move="1" aria-label="Bajar ${escapeHTML(c.label)}"${i === n - 1 ? ' disabled' : ''}>${ICON_DOWN}</button>
+            <button class="icon-button cat-row__remove" type="button" data-cat-remove aria-label="Borrar ${escapeHTML(c.label)}"${used ? ` disabled title="Tiene piezas: muévelas antes de borrarla"` : ''}>${ICON_TRASH}</button>
+          </span>
+        </div>
+      </li>`;
+    }).join('') || '<li class="cat-row cat-row--empty">Todavía no hay categorías.</li>';
+  }
+
+  function addCat() {
+    const label = cats.input.value.trim().replace(/\s+/g, ' ');
+    cats.error.textContent = '';
+    if (!label) { cats.input.focus(); return; }
+    if (cats.draft.some((c) => normalize(c.label) === normalize(label))) {
+      cats.error.textContent = `Ya existe "${label}".`;
+      return;
+    }
+    const c = { id: slugify(label), label, isNew: true };
+    cats.removed = cats.removed.filter((id) => id !== c.id); // se vuelve a crear una que se iba a borrar
+    cats.draft.push(c);
+    cats.input.value = '';
+    renderCats();
+  }
+
+  cats.list.addEventListener('input', (e) => {
+    if (!e.target.matches('[data-cat-label]')) return;
+    const c = cats.draft.find((x) => x.id === e.target.closest('[data-cat]').dataset.cat);
+    if (c) c.label = e.target.value;
+    cats.error.textContent = '';
+  });
+
+  cats.list.addEventListener('click', (e) => {
+    const row = e.target.closest('[data-cat]');
+    if (!row) return;
+    const i = cats.draft.findIndex((x) => x.id === row.dataset.cat);
+    const move = e.target.closest('[data-cat-move]');
+    if (move && !move.disabled) {
+      const j = i + Number(move.dataset.catMove);
+      [cats.draft[i], cats.draft[j]] = [cats.draft[j], cats.draft[i]];
+      renderCats();
+      cats.list.querySelector(`[data-cat="${CSS.escape(row.dataset.cat)}"] [data-cat-move="${move.dataset.catMove}"]:not(:disabled)`)?.focus();
+      return;
+    }
+    const rm = e.target.closest('[data-cat-remove]');
+    if (rm && !rm.disabled) {
+      const [gone] = cats.draft.splice(i, 1);
+      if (!gone.isNew) cats.removed.push(gone.id);
+      renderCats();
+    }
+  });
+
+  cats.input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addCat(); } });
+  $('[data-cat-add]').addEventListener('click', addCat);
+
+  cats.form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (cats.save.disabled || cats.saving) return;
+    cats.draft.forEach((c) => { c.label = c.label.trim().replace(/\s+/g, ' '); });
+    const labels = cats.draft.map((c) => normalize(c.label));
+    if (labels.some((l) => !l)) { cats.error.textContent = 'Ponle nombre a cada categoría.'; return; }
+    if (new Set(labels).size !== labels.length) { cats.error.textContent = 'Hay dos categorías con el mismo nombre.'; return; }
+    const blocked = cats.removed.filter((id) => usage(id));
+    if (blocked.length) { cats.error.textContent = 'Una categoría que quitaste todavía tiene piezas.'; return; }
+    if (!catsDirty()) { toast('No hay cambios en las categorías'); return; }
+
+    cats.saving = true;
+    cats.save.disabled = true;
+    cats.status.textContent = 'Guardando…';
+    try {
+      const rows = await api.saveCategories(cats.draft, cats.removed);
+      state.categories = rows.sort((a, b) => a.position - b.position).map(({ id, label }) => ({ id, label }));
+      cats.draft = state.categories.map((c) => ({ ...c }));
+      cats.removed = [];
+      cats.original = catSnapshot();
+      renderCats();
+      cats.status.textContent = '';
+      toast('Categorías guardadas');
+    } catch (err) {
+      cats.status.textContent = '';
+      toast(err.message);
+      loadCats(); // vuelve a lo que de verdad quedó en la base
+    } finally {
+      cats.saving = false;
+      cats.save.disabled = false;
+    }
+  });
+
   /* ---------- Eventos ---------- */
   els.list.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-step]');
@@ -470,7 +616,11 @@
     searchTimer = setTimeout(() => { state.query = els.search.value; render(); }, 120);
   });
 
-  $('[data-reload]').addEventListener('click', () => (els.sections.store.hidden ? load() : loadStore()));
+  $('[data-reload]').addEventListener('click', () => {
+    if (els.sections.store.hidden) return load();
+    loadStore();
+    if (!catsDirty() || confirm('¿Descartar los cambios en las categorías?')) { cats.original = ''; loadCats(); }
+  });
 
   // Al volver a la app después de un rato, trae lo último (otra persona pudo vender algo)
   document.addEventListener('visibilitychange', () => {
@@ -481,7 +631,7 @@
   });
 
   window.addEventListener('beforeunload', (e) => {
-    if (hasUnsaved() || window.BagEditor?.isDirty()) { e.preventDefault(); e.returnValue = ''; }
+    if (hasUnsaved() || window.BagEditor?.isDirty() || catsDirty()) { e.preventDefault(); e.returnValue = ''; }
   });
 
   /* ---------- Instalar como app (PWA) ---------- */

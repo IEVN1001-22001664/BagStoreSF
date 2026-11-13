@@ -28,12 +28,14 @@
 
   // Mensajes de Supabase → español claro
   function humanize(status, body) {
-    const raw = `${body?.error_code || ''} ${body?.error || ''} ${body?.error_description || body?.msg || body?.message || ''}`.toLowerCase();
+    const raw = `${body?.error_code || body?.code || ''} ${body?.error || ''} ${body?.error_description || body?.msg || body?.message || ''} ${body?.details || ''}`.toLowerCase();
     if (raw.includes('invalid login') || raw.includes('invalid_credentials') || raw.includes('invalid_grant')) return 'Correo o contraseña incorrectos.';
     if (raw.includes('email not confirmed')) return 'Falta confirmar este correo en Supabase.';
     if (raw.includes('could not find the function') || raw.includes('pgrst202')) return 'Falta actualizar la base de datos. Avisa a quien administra el sitio.';
     if (raw.includes('duplicate key') && raw.includes('product_colors')) return 'Hay dos colores con el mismo nombre.';
+    if (raw.includes('categories') && (raw.includes('still referenced') || raw.includes('update or delete on table'))) return 'Esa categoría todavía tiene piezas. Muévelas a otra antes de borrarla.';
     if (raw.includes('foreign key') && raw.includes('categor')) return 'Esa categoría ya no existe. Elige otra.';
+    if (raw.includes('categories_id_check')) return 'El nombre de la categoría no es válido.';
     if (raw.includes('payload too large') || status === 413) return 'La foto es demasiado pesada.';
     if (raw.includes('rate limit') || status === 429) return 'Demasiados intentos. Espera un minuto y vuelve a probar.';
     if (status === 401 || status === 403) return 'Tu sesión terminó. Vuelve a entrar.';
@@ -141,7 +143,19 @@
       if (!rows?.length) throw new ApiError('Esa pieza ya no existe.', 404);
       return rows[0];
     },
-    listCategories: () => authed('categories?select=id,label&order=position.asc,id.asc'),
+    listCategories: () => authed('categories?select=id,label,position&order=position.asc,id.asc'),
+    // Borra las quitadas y luego guarda nombres y orden de todas en una sola petición (upsert)
+    async saveCategories(list, removedIds = []) {
+      if (removedIds.length) {
+        await authed(`categories?id=in.(${removedIds.map(encodeURIComponent).join(',')})`, { method: 'DELETE' });
+      }
+      if (!list.length) return [];
+      return authed('categories?on_conflict=id&select=id,label,position', {
+        method: 'POST',
+        body: list.map((c, i) => ({ id: c.id, label: c.label, position: i })),
+        headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
+      });
+    },
     saveProduct: (p) => authed('rpc/save_product', { method: 'POST', body: { p } }),
     deleteProduct: (pid) => authed('rpc/delete_product', { method: 'POST', body: { pid } }),
     async getStore() {

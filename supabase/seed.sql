@@ -5,7 +5,7 @@ begin;
 delete from public.products;
 
 insert into public.store_settings (id, name, tagline, address, maps_url, whatsapp, instagram, currency, theme_color)
-values (true, 'BAG STORE SF', 'Bags · Style · Elegance', 'Calle Altamirano #132, San Felipe, Gto.', 'https://www.google.com/maps/search/?api=1&query=Calle+Altamirano+132+San+Felipe+Guanajuato', '527299603872', null, 'MXN', '#aa83d0')
+values (true, 'BAG STORE SF', 'Bags · Style · Elegance', 'Calle Altamirano #132, San Felipe, Gto.', 'https://www.google.com/maps/search/?api=1&query=Calle+Altamirano+132+San+Felipe+Guanajuato', '525631807025', null, 'MXN', '#aa83d0')
 on conflict (id) do update set name = excluded.name, tagline = excluded.tagline, address = excluded.address,
   maps_url = excluded.maps_url, whatsapp = excluded.whatsapp, instagram = excluded.instagram,
   currency = excluded.currency, theme_color = excluded.theme_color;

@@ -51,7 +51,8 @@
 
   const realFetch = window.fetch.bind(window);
   const delay = (ms) => new Promise((r) => setTimeout(r, ms));
-  const json = (status, body) => new Response(body === undefined ? '' : JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+  // 204 = sin cuerpo (así responde Supabase); un cuerpo '' con 204 hace que Response() falle
+  const json = (status, body) => new Response(status === 204 || body === undefined ? null : JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
   const sorted = (p) => ({ ...structuredClone(p),
     product_colors: [...p.product_colors].sort((a, b) => a.position - b.position),
     product_images: [...p.product_images].sort((a, b) => a.position - b.position) });
@@ -101,7 +102,23 @@
       const list = [...db.products].sort((a, b) => a.position - b.position || a.ref.localeCompare(b.ref));
       return json(200, (id ? list.filter((p) => p.id === decodeURIComponent(id)) : list).map(sorted));
     }
-    if (path.startsWith('/rest/v1/categories?')) return json(200, db.categories);
+    if (path.startsWith('/rest/v1/categories?') && method === 'GET') return json(200, db.categories.map((c, i) => ({ ...c, position: i })));
+    if (path.startsWith('/rest/v1/categories?id=in.') && method === 'DELETE') {
+      const ids = decodeURIComponent(path.match(/in\.\(([^)]*)\)/)[1]).split(',');
+      const used = ids.find((id) => db.products.some((p) => p.category_id === id));
+      if (used) return json(409, { code: '23503', message: 'update or delete on table "categories" violates foreign key constraint "products_category_id_fkey" on table "products"', details: `Key (id)=(${used}) is still referenced from table "products".` });
+      db.categories = db.categories.filter((c) => !ids.includes(c.id));
+      return json(204);
+    }
+    if (path.startsWith('/rest/v1/categories?on_conflict=id') && method === 'POST') {
+      if (body.some((c) => !/^[a-z0-9-]{2,40}$/.test(c.id))) return json(400, { message: 'new row for relation "categories" violates check constraint "categories_id_check"' });
+      for (const c of body) {
+        const cur = db.categories.find((x) => x.id === c.id);
+        if (cur) Object.assign(cur, c); else db.categories.push({ ...c });
+      }
+      db.categories.sort((a, b) => a.position - b.position);
+      return json(201, db.categories.map((c, i) => ({ id: c.id, label: c.label, position: c.position ?? i })));
+    }
     if (path.startsWith('/rest/v1/store_settings?')) {
       if (method === 'PATCH') Object.assign(db.store, body);
       return json(200, [structuredClone(db.store)]);

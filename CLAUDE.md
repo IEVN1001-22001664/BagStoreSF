@@ -17,7 +17,7 @@ Migrado desde una tienda Kyte. El dueño del proyecto escribe en español: respo
 | Archivo | Qué contiene |
 | --- | --- |
 | `assets/js/config.js` | URL de Supabase y clave publicable (la usan el catálogo y el panel) |
-| `admin/` | Panel en `/admin/` (rutas `#piezas`, `#pieza/<uuid>`, `#nueva`, `#tienda`): `api.js` (REST, Storage y sesión, sin SDK), `admin.js` (lista con − n + y guardado automático, datos de la tienda), `editor.js` (editar/crear/eliminar pieza), `images.js` (redimensiona fotos en el navegador), `admin.css`, PWA: `manifest.webmanifest`, `sw.js`, `icons/` |
+| `admin/` | Panel en `/admin/` (rutas `#piezas`, `#pieza/<uuid>`, `#nueva`, `#tienda`): `api.js` (REST, Storage y sesión, sin SDK), `admin.js` (lista con − n + y guardado automático, datos de la tienda y categorías), `editor.js` (editar/crear/eliminar pieza), `images.js` (redimensiona fotos en el navegador), `admin.css`, PWA: `manifest.webmanifest`, `sw.js`, `icons/` |
 | `assets/js/data.js` | Carga el catálogo: Supabase (`rpc/catalog`) → copia en localStorage → `catalog.js`. Expone `window.BAGSTORE_READY` |
 | `assets/data/catalog.js` | **Respaldo** (ya no es la fuente de verdad): `window.BAGSTORE = { store, products }` con los 40 productos de la migración |
 | `assets/js/app.js` | Filtros, búsqueda, favoritos (localStorage), ficha de producto, paginación de 24, enlaces `#producto-NN` |
@@ -34,7 +34,8 @@ Fases: 1) esquema y seed ✅ · 2) el catálogo lee `rpc/catalog` con `catalog.j
 disponibilidad ✅ · 4) edición completa y fotos ✅ (requiere `003_guardar_pieza.sql`) · 5) PWA ✅ (falta la prueba en teléfono real).
 Cada pieza tiene colores (`product_colors`) con su propio stock; el stock de la pieza es la suma (o `null`).
 El editor guarda con `rpc/save_product` (todo o nada); los ids de pieza, color y foto se generan en el navegador para subir
-las fotos antes de guardar. Las categorías aún no se editan desde el panel.
+las fotos antes de guardar. Categorías (pestaña Tienda): el `id` se genera del nombre y no cambia al renombrar;
+se guardan con un upsert (`on_conflict=id`) y solo se pueden borrar si ninguna pieza las usa (la llave foránea lo impide).
 Los datos ahora se editan en Supabase. No regeneres ni vuelvas a correr `seed.sql`: borra todos los productos y los recarga desde `catalog.js`.
 break-ui no consulta la red (`data.js` detecta `window.__BREAKUI_KEY`) y sigue usando `dev/fixtures.js`.
 
@@ -95,4 +96,3 @@ Skills que el usuario pidió usar en el frontend: **emil-design-eng** y **mobile
 - El Instagram de Kyte estaba mal capturado; `store.instagram` está vacío hasta tener el usuario correcto.
 - El banner de Kyte es de baja resolución (458×284) y no se usa.
 - Falta probar en un teléfono real: arrastrar para cerrar la ficha, notch, teclado, instalar el panel, cámara y fotos HEIC.
-- Las categorías no se editan desde el panel (solo en Supabase → tabla `categories`).
