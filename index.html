@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+  <title>BAG STORE SF · Catálogo</title>
+  <meta name="description" content="Catálogo virtual de BAG STORE SF: bolsas, carteras y accesorios Steve Madden, Guess y más en San Felipe, Gto." />
+  <meta name="color-scheme" content="light" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fbf8f4" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#fbf8f4" />
+  <meta property="og:title" content="BAG STORE SF · Catálogo" />
+  <meta property="og:description" content="Bags · Style · Elegance — piezas originales en San Felipe, Gto." />
+  <meta property="og:image" content="assets/img/brand/logo.webp" />
+  <link rel="icon" href="assets/img/brand/logo.webp" type="image/webp" />
+  <link rel="apple-touch-icon" href="assets/img/brand/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#catalogo">Ir al catálogo</a>
+
+  <header class="site-header" data-header>
+    <div class="site-header__inner">
+      <a class="brand" href="#" aria-label="BAG STORE SF, inicio">
+        <img class="brand__logo" src="assets/img/brand/logo.webp" alt="" width="40" height="40" />
+        <span class="brand__name">Bag Store <em>SF</em></span>
+      </a>
+      <button class="icon-button fav-toggle" type="button" data-fav-filter aria-pressed="false" aria-label="Ver favoritos">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.3-9.2C1.4 7.9 3.6 4.5 7 4.5c2 0 3.6 1.1 5 2.9 1.4-1.8 3-2.9 5-2.9 3.4 0 5.6 3.4 4.3 6.8-1.8 4.6-9.3 9.2-9.3 9.2z"/></svg>
+        <span class="fav-toggle__count" data-fav-count hidden>0</span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero__copy">
+        <p class="eyebrow">Nueva colección · San Felipe, Gto.</p>
+        <h1 id="hero-title" class="hero__title">
+          Bolsas que <em>hablan</em><br />por ti.
+        </h1>
+        <p class="hero__lead">Piezas originales de Steve Madden, Guess y más. La mayoría son únicas: cuando se va, se fue.</p>
+        <div class="hero__actions">
+          <a class="button button--primary" href="#catalogo">Ver catálogo</a>
+          <span class="hero__count"><strong data-total>—</strong> piezas disponibles</span>
+        </div>
+      </div>
+      <div class="hero__stack" data-hero-stack aria-hidden="true"></div>
+    </section>
+
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee__track" data-marquee></div>
+    </div>
+
+    <section id="catalogo" class="catalog" aria-labelledby="catalog-title">
+      <div class="catalog__head">
+        <h2 id="catalog-title" class="section-title">El catálogo</h2>
+        <p class="catalog__result" data-result aria-live="polite"></p>
+      </div>
+
+      <div class="toolbar" data-toolbar>
+        <label class="search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+          <span class="sr-only">Buscar</span>
+          <input type="search" placeholder="Buscar crossbody, Guess, cartera…" data-search enterkeyhint="search" autocomplete="off" />
+        </label>
+        <div class="selects">
+          <label class="select">
+            <span class="sr-only">Marca</span>
+            <select data-brand></select>
+          </label>
+          <label class="select">
+            <span class="sr-only">Ordenar</span>
+            <select data-sort>
+              <option value="featured">Destacados</option>
+              <option value="price-asc">Menor precio</option>
+              <option value="price-desc">Mayor precio</option>
+            </select>
+          </label>
+        </div>
+        <div class="chips" role="tablist" aria-label="Categorías" data-chips></div>
+      </div>
+
+      <ul class="grid" data-grid></ul>
+
+      <div class="empty" data-empty hidden>
+        <p class="empty__title">Nada por aquí… todavía.</p>
+        <p>Prueba con otra búsqueda o categoría.</p>
+        <button class="button button--ghost" type="button" data-reset>Limpiar filtros</button>
+      </div>
+    </section>
+
+    <section class="visit" aria-labelledby="visit-title">
+      <div class="visit__card">
+        <p class="eyebrow">Visítanos</p>
+        <h2 id="visit-title" class="section-title">Ven a enamorarte en persona.</h2>
+        <p class="visit__address" data-address></p>
+        <a class="button button--light" data-maps target="_blank" rel="noopener">Cómo llegar</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>© <span data-year></span> BAG STORE SF · Bags · Style · Elegance</p>
+    <p class="site-footer__note">Precios en pesos mexicanos. Sujetos a disponibilidad.</p>
+  </footer>
+
+  <dialog class="sheet" data-sheet aria-labelledby="sheet-title">
+    <div class="sheet__panel" data-sheet-panel>
+      <div class="sheet__grabber" data-sheet-grabber aria-hidden="true"><span></span></div>
+      <button class="icon-button sheet__close" type="button" data-sheet-close aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+      <div class="sheet__body" data-sheet-body></div>
+    </div>
+  </dialog>
+
+  <div class="toast" data-toast role="status" aria-live="polite"></div>
+
+  <script src="assets/data/catalog.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
