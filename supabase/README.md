@@ -10,6 +10,7 @@ El sitio ya lee de Supabase (`assets/js/data.js`); `catalog.js` queda solo como 
 | --- | --- |
 | `migrations/001_catalogo.sql` | Tablas, reglas de acceso (RLS) y la función pública `catalog()` |
 | `migrations/002_storage.sql` | Bucket público `products` para las fotos; solo admin sube o borra |
+| `migrations/004_pedidos.sql` | Carrito y pedidos: tablas `orders` y `order_items`, `create_order`/`get_order` (públicas), `complete_order`/`cancel_order`/`list_orders` (admin) y `catalog()` con todos los colores |
 | `migrations/003_guardar_pieza.sql` | `save_product` y `delete_product` (guardar una pieza con colores y fotos de una vez) y permiso de lectura de fotos para admin |
 | `seed.sql` | Los 40 productos actuales. **Generado**: no lo edites a mano |
 | `generate-seed.mjs` | `node supabase/generate-seed.mjs` vuelve a crear `seed.sql` desde `catalog.js` |
@@ -34,7 +35,7 @@ con la misma forma que `window.BAGSTORE` (más `colors` y `description`).
 
 1. Crea un proyecto en [supabase.com](https://supabase.com) (plan gratuito, región `us-east` o la más cercana).
 2. En **SQL Editor**, pega y ejecuta, en este orden:
-   `migrations/001_catalogo.sql`, `migrations/002_storage.sql`, `seed.sql` y `migrations/003_guardar_pieza.sql`.
+   `migrations/001_catalogo.sql`, `migrations/002_storage.sql`, `seed.sql`, `migrations/003_guardar_pieza.sql` y `migrations/004_pedidos.sql`.
    (Las migraciones se pueden volver a correr; `seed.sql` no, porque borra los productos.)
 3. Da de alta a la dueña (y a ti) como admin:
    ```sql

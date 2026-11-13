@@ -74,6 +74,7 @@
       </div>
       <nav class="admin-tabs" aria-label="Secciones">
         <a class="admin-tabs__tab" href="#piezas" data-tab="list">Piezas</a>
+        <a class="admin-tabs__tab" href="#pedidos" data-tab="orders">Pedidos <span class="admin-tabs__badge" data-orders-badge hidden></span></a>
         <a class="admin-tabs__tab" href="#tienda" data-tab="store">Tienda</a>
       </nav>
       <div class="admin-tools" data-tools>
@@ -104,6 +105,17 @@
       <a class="button button--primary fab" href="#nueva" data-fab>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Nueva pieza
       </a>
+    </main>
+
+    <main class="admin-main" data-section="orders" hidden>
+      <label class="search orders-search">
+        <span class="sr-only">Buscar pedido por código o nombre</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
+        <input type="search" placeholder="Código (BS-7K4Q) o nombre" data-orders-search autocomplete="off" autocapitalize="characters" enterkeyhint="search" />
+      </label>
+      <div class="chips admin-filters" role="tablist" aria-label="Filtrar pedidos" data-orders-filters></div>
+      <p class="admin-status" data-orders-status aria-live="polite"></p>
+      <ul class="order-list" data-orders-list></ul>
     </main>
 
     <main class="admin-main" data-section="store" hidden>
@@ -151,6 +163,9 @@
     </main>
   </div>
 
+  <!-- Detalle de un pedido para cobrarlo (lo dibuja orders.js) -->
+  <div data-view="order" hidden></div>
+
   <!-- Editor de pieza (lo dibuja editor.js) -->
   <div data-view="editor" hidden></div>
 
@@ -180,5 +195,6 @@
   <script src="images.js"></script>
   <script src="admin.js"></script>
   <script src="editor.js"></script>
+  <script src="orders.js"></script>
 </body>
 </html>

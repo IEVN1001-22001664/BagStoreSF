@@ -36,6 +36,7 @@
     denied: $('[data-view="denied"]'),
     panel: $('[data-view="panel"]'),
     editor: $('[data-view="editor"]'),
+    order: $('[data-view="order"]'),
   };
   const els = {
     login: $('[data-login]'),
@@ -48,7 +49,7 @@
     search: $('[data-search]'),
     filters: $('[data-filters]'),
     tools: $('[data-tools]'),
-    sections: { list: $('[data-section="list"]'), store: $('[data-section="store"]') },
+    sections: { list: $('[data-section="list"]'), orders: $('[data-section="orders"]'), store: $('[data-section="store"]') },
     tabs: document.querySelectorAll('[data-tab]'),
     store: $('[data-store-form]'),
     storeStatus: $('[data-store-status]'),
@@ -138,6 +139,7 @@
     }
     state.admin = true;
     showInstall();
+    window.BagOrders?.refreshBadge();
     await route();
     load();
     loadCategories();
@@ -151,15 +153,19 @@
     if (!state.admin) return;
     const h = location.hash;
     const m = h.match(/^#pieza\/([0-9a-f-]{36})$/i);
-    if (m || h === '#nueva') {
+    const order = h.match(/^#pedido\/([0-9a-f-]{36})$/i);
+    if (order) {
+      show('order');
+      await window.BagOrders.open(order[1]);
+    } else if (m || h === '#nueva') {
       show('editor');
       await window.BagEditor.open(m ? m[1] : null);
     } else {
       show('panel');
-      const tab = h === '#tienda' ? 'store' : 'list';
-      els.sections.list.hidden = tab !== 'list';
-      els.sections.store.hidden = tab !== 'store';
+      const tab = h === '#tienda' ? 'store' : h === '#pedidos' ? 'orders' : 'list';
+      for (const [k, el] of Object.entries(els.sections)) el.hidden = k !== tab;
       els.tools.hidden = tab !== 'list';
+      if (tab === 'orders') window.BagOrders.loadList();
       els.tabs.forEach((t) => (t.dataset.tab === tab ? t.setAttribute('aria-current', 'page') : t.removeAttribute('aria-current')));
       if (tab === 'store') { loadStore(); if (!catsDirty()) loadCats(); }
     }
@@ -617,6 +623,7 @@
   });
 
   $('[data-reload]').addEventListener('click', () => {
+    if (!els.sections.orders.hidden) return window.BagOrders.loadList();
     if (els.sections.store.hidden) return load();
     loadStore();
     if (!catsDirty() || confirm('¿Descartar los cambios en las categorías?')) { cats.original = ''; loadCats(); }
@@ -683,7 +690,7 @@
   window.BagAdmin = {
     api, $, escapeHTML, money, imgURL, toast, normalize,
     stockLabel, stockTone, stepperHTML, nextStock, mapProduct, MAX_STOCK,
-    state, go, load, loadCategories,
+    state, go, load, loadCategories, show,
   };
 
   enter();

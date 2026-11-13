@@ -8,7 +8,7 @@ window.BAGSTORE = {
     "address": "Calle Altamirano #132, San Felipe, Gto.",
     "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Calle+Altamirano+132+San+Felipe+Guanajuato",
     "whatsapp": "525631807025",
-    "instagram": "",
+    "instagram": "bagstoresf",
     "currency": "MXN"
   },
   "products": [

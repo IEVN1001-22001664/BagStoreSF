@@ -47,6 +47,29 @@
         product_colors: [], product_images: [] },
     );
   }
+  // Pedidos de ejemplo: uno por cobrar (una pieza no alcanza), uno vencido, uno cobrado y uno cancelado
+  db.orders = [];
+  if (mode !== 'empty') {
+    const colorOf = (ref) => db.products.find((p) => p.ref === ref)?.product_colors[0];
+    const item = (ref, qty, extra = {}) => {
+      const p = db.products.find((x) => x.ref === ref);
+      const c = extra.color || p.product_colors[0];
+      return { id: uid(), productId: p.id, colorId: c.id, ref, name: p.name, colorName: c.name, image: p.product_images[0]?.sm || null,
+        price: p.price || null, qty, stockNow: c.stock, colorExists: true };
+    };
+    const ago = (h) => new Date(Date.now() - h * 36e5).toISOString();
+    const mk = (code, name, status, h, items, extra = {}) => {
+      const total = items.reduce((s, i) => s + (i.price || 0) * i.qty, 0);
+      db.orders.push({ id: uid(), code, customerName: name, status, total, hasUnpriced: items.some((i) => !i.price),
+        createdAt: ago(h), expiresAt: new Date(Date.parse(ago(h)) + 7 * 864e5).toISOString(), paidAt: null, cancelledAt: null, items, ...extra });
+    };
+    const p41 = db.products.find((p) => p.ref === '41');
+    mk('BS-7K4Q', 'Ana López', 'pending', 2, [item('01', 2), item('41', 2, { color: p41.product_colors[1] }), item('43', 1)]);
+    mk('BS-M2PX', null, 'expired', 24 * 8, [item('05', 1)]);
+    mk('BS-Q9TA', 'Karla', 'paid', 30, [item('07', 1)], { paidAt: ago(28) });
+    mk('BS-ZH3C', 'Sofía', 'cancelled', 50, [item('09', 1)], { cancelledAt: ago(49) });
+    void colorOf;
+  }
   window.__mockDb = db;
 
   const realFetch = window.fetch.bind(window);
@@ -136,6 +159,38 @@
       if (i < 0) return json(404, { message: 'Esa pieza ya no existe.' });
       const [p] = db.products.splice(i, 1);
       return json(200, { removed: p.product_images.flatMap((x) => [x.src, x.sm]) });
+    }
+    // Pedidos (migración 004)
+    const findOrder = (id) => db.orders.find((o) => o.id === id);
+    const fresh = (o) => {
+      for (const i of o.items) {
+        const c = db.products.flatMap((p) => p.product_colors).find((x) => x.id === i.colorId);
+        i.stockNow = c ? c.stock : null; i.colorExists = !!c;
+      }
+      return structuredClone(o);
+    };
+    if (path === '/rest/v1/rpc/list_orders') return json(200, [...db.orders].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(fresh));
+    if (path === '/rest/v1/rpc/get_order') { const o = findOrder(body.oid); return json(200, o ? fresh(o) : null); }
+    if (path === '/rest/v1/rpc/cancel_order') {
+      const o = findOrder(body.oid);
+      if (o.status === 'paid') return json(400, { message: `El pedido ${o.code} ya se cobró.` });
+      Object.assign(o, { status: 'cancelled', cancelledAt: new Date().toISOString() });
+      return json(200, fresh(o));
+    }
+    if (path === '/rest/v1/rpc/complete_order') {
+      const o = findOrder(body.oid);
+      if (!['pending', 'expired'].includes(o.status)) return json(400, { message: `El pedido ${o.code} ya está ${o.status === 'paid' ? 'cobrado' : 'cancelado'}.` });
+      const want = new Map((body.final || o.items.map((i) => ({ id: i.id, qty: i.qty }))).map((x) => [x.id, x.qty]));
+      const keep = o.items.filter((i) => (want.get(i.id) ?? i.qty) > 0).map((i) => ({ ...i, qty: want.get(i.id) ?? i.qty }));
+      if (!keep.length) return json(400, { message: 'El pedido quedó sin piezas. Mejor cancélalo.' });
+      const colors = db.products.flatMap((p) => p.product_colors);
+      for (const i of keep) {
+        const c = colors.find((x) => x.id === i.colorId);
+        if (c && c.stock !== null && c.stock < i.qty) return json(400, { message: `No alcanza: #${i.ref} ${i.colorName ? i.colorName + ' ' : ''}(pedido ${i.qty}, quedan ${c.stock}). Ajusta la cantidad.` });
+      }
+      for (const i of keep) { const c = colors.find((x) => x.id === i.colorId); if (c && c.stock !== null) c.stock -= i.qty; }
+      Object.assign(o, { items: keep, status: 'paid', paidAt: new Date().toISOString(), total: keep.reduce((s, i) => s + (i.price || 0) * i.qty, 0), hasUnpriced: keep.some((i) => !i.price) });
+      return json(200, fresh(o));
     }
     if (path.startsWith('/storage/v1/object/products/') && method === 'POST') {
       db.files.add(path.slice('/storage/v1/object/products/'.length));

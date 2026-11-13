@@ -31,6 +31,8 @@
     const raw = `${body?.error_code || body?.code || ''} ${body?.error || ''} ${body?.error_description || body?.msg || body?.message || ''} ${body?.details || ''}`.toLowerCase();
     if (raw.includes('invalid login') || raw.includes('invalid_credentials') || raw.includes('invalid_grant')) return 'Correo o contraseña incorrectos.';
     if (raw.includes('email not confirmed')) return 'Falta confirmar este correo en Supabase.';
+    const msg = body?.message || '';
+    if (/^(No alcanza|El pedido|Ese pedido|No tienes permiso)/.test(msg)) return msg;
     if (raw.includes('could not find the function') || raw.includes('pgrst202')) return 'Falta actualizar la base de datos. Avisa a quien administra el sitio.';
     if (raw.includes('duplicate key') && raw.includes('product_colors')) return 'Hay dos colores con el mismo nombre.';
     if (raw.includes('categories') && (raw.includes('still referenced') || raw.includes('update or delete on table'))) return 'Esa categoría todavía tiene piezas. Muévelas a otra antes de borrarla.';
@@ -158,6 +160,10 @@
     },
     saveProduct: (p) => authed('rpc/save_product', { method: 'POST', body: { p } }),
     deleteProduct: (pid) => authed('rpc/delete_product', { method: 'POST', body: { pid } }),
+    listOrders: () => authed('rpc/list_orders', { method: 'POST', body: { lim: 200 } }),
+    getOrder: (oid) => authed('rpc/get_order', { method: 'POST', body: { oid } }),
+    completeOrder: (oid, final) => authed('rpc/complete_order', { method: 'POST', body: { oid, final } }),
+    cancelOrder: (oid) => authed('rpc/cancel_order', { method: 'POST', body: { oid } }),
     async getStore() {
       const rows = await authed('store_settings?select=name,tagline,address,maps_url,whatsapp,instagram');
       return rows?.[0] || null;

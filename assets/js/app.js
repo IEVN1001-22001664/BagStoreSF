@@ -81,6 +81,14 @@
     $('[data-year]').textContent = new Date().getFullYear();
     $('[data-address]').textContent = store.address;
     $('[data-maps]').href = store.mapsUrl;
+    // Instagram a un toque (en el teléfono abre la app de Instagram)
+    const ig = String(store.instagram || '').trim().replace(/^@/, '');
+    document.querySelectorAll('[data-instagram]').forEach((a) => {
+      a.hidden = !ig;
+      if (!ig) return;
+      a.href = `https://www.instagram.com/${encodeURIComponent(ig)}/`;
+      if (a.classList.contains('icon-button')) a.setAttribute('aria-label', `Instagram de ${store.name} (@${ig})`);
+    });
 
     const withPhoto = (p) => p && Array.isArray(p.images) && p.images.length;
     let heroItems = HERO_REFS.map((ref) => products.find((p) => p.ref === ref)).filter(withPhoto);
@@ -277,18 +285,87 @@
         <p class="detail__note">${soldOut
           ? 'Esta pieza ya encontró dueña. Escríbenos y te avisamos si vuelve a llegar o te mostramos algo parecido.'
           : `Original y lista para estrenar. Visítanos en ${escapeHTML(store.address)} o apártala antes de que alguien más se enamore.`}</p>
-        <div class="detail__actions">
-          <a class="button button--primary" href="${contact.href}" target="_blank" rel="noopener">${contact.label}</a>
-          <button class="icon-button" type="button" data-fav="${p.ref}" aria-pressed="${favs.has(p.ref)}" aria-label="Guardar en favoritos">${HEART}</button>
-        </div>
-        <button class="button button--ghost" type="button" data-share style="margin-top:10px;width:100%">${SHARE.replace('<svg', '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"')} Compartir</button>
+        ${colorsHTML(p)}
+        ${actionsHTML(p, contact, soldOut)}
       </div>`;
+  }
+
+  /* ---------- Colores y carrito en la ficha ---------- */
+  const SHARE_SM = () => SHARE.replace('<svg', '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"');
+  let selColor = null; // color elegido en la ficha abierta
+  const pickable = (p) => (Array.isArray(p.colors) ? p.colors : []);
+  const canCart = (p) => !!window.BagCart?.enabled() && !isSoldOut(p) && pickable(p).some((c) => c.stock !== 0);
+
+  function colorsHTML(p) {
+    const cs = pickable(p);
+    if (cs.length < 2 && !cs[0]?.name) return '';
+    return `<div class="detail__colors">
+      <p class="detail__label">Color${selColor ? `: <span data-color-name>${escapeHTML(cs.find((c) => c.id === selColor)?.name || '')}</span>` : ''}</p>
+      <div class="swatches" role="radiogroup" aria-label="Color">
+        ${cs.map((c) => `<button class="swatch-chip${c.stock === 0 ? ' is-out' : ''}" type="button" role="radio" data-color-pick="${c.id}"
+            aria-checked="${c.id === selColor}"${c.stock === 0 ? ' aria-disabled="true"' : ''}>
+            <span class="swatch-chip__dot"${c.hex ? ` style="background:${escapeHTML(c.hex)}"` : ''} aria-hidden="true"></span>
+            ${escapeHTML(c.name || 'Único')}${c.stock === 0 ? ' · agotado' : c.stock === 1 ? ' · última' : ''}
+          </button>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  function addLabel(p) {
+    const left = window.BagCart.room(p, selColor);
+    return left > 0 ? 'Agregar al carrito' : 'Ya está en tu carrito · Ver';
+  }
+
+  function actionsHTML(p, contact, soldOut) {
+    const fav = `<button class="icon-button" type="button" data-fav="${p.ref}" aria-pressed="${favs.has(p.ref)}" aria-label="Guardar en favoritos">${HEART}</button>`;
+    if (!canCart(p)) {
+      return `<div class="detail__actions">
+          <a class="button button--primary" href="${contact.href}" target="_blank" rel="noopener">${contact.label}</a>${fav}
+        </div>
+        <button class="button button--ghost" type="button" data-share style="margin-top:10px;width:100%">${SHARE_SM()} Compartir</button>`;
+    }
+    return `<div class="detail__actions">
+        <button class="button button--primary" type="button" data-add-cart>${addLabel(p)}</button>${fav}
+      </div>
+      <div class="detail__more">
+        <a class="button button--ghost" href="${contact.href}" target="_blank" rel="noopener">Preguntar</a>
+        <button class="button button--ghost" type="button" data-share>${SHARE_SM()} Compartir</button>
+      </div>`;
+  }
+
+  function defaultColor(p) {
+    const cs = pickable(p);
+    return (cs.find((c) => c.stock !== 0) || cs[0])?.id || null;
+  }
+
+  function pickColor(id) {
+    const c = pickable(current).find((x) => x.id === id);
+    if (!c || c.stock === 0) return;
+    selColor = id;
+    els.sheetBody.querySelectorAll('[data-color-pick]').forEach((b) => b.setAttribute('aria-checked', b.dataset.colorPick === id));
+    const name = $('[data-color-name]', els.sheetBody);
+    if (name) name.textContent = c.name || '';
+    const add = $('[data-add-cart]', els.sheetBody);
+    if (add) add.textContent = addLabel(current);
+    // Si hay una foto ligada a ese color, la galería salta a ella
+    const k = imagesOf(current).findIndex((im) => im.color === id);
+    const track = $('[data-track]', els.sheetBody);
+    if (k >= 0 && track) track.scrollTo({ left: k * track.clientWidth, behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+  }
+
+  function addToCart() {
+    if (!current || !selColor) return;
+    if (window.BagCart.room(current, selColor) <= 0) return window.BagCart.open();
+    window.BagCart.add(current, selColor);
+    const add = $('[data-add-cart]', els.sheetBody);
+    if (add) add.textContent = addLabel(current);
   }
 
   function openSheet(ref, { push = true } = {}) {
     const p = products.find((x) => x.ref === ref);
     if (!p) return;
     current = p;
+    selColor = defaultColor(p);
     els.sheetBody.innerHTML = sheetHTML(p);
     els.sheetBody.scrollTop = 0;
     setupGallery();
@@ -300,12 +377,15 @@
       $('[data-sheet-close]').focus({ preventScroll: true });
     }
     els.sheetPanel.style.transform = '';
-    requestAnimationFrame(() => requestAnimationFrame(() => els.sheet.classList.add('is-open')));
+    const token = ++sheetToken; // si se cierra antes de este cuadro, no se vuelve a abrir
+    requestAnimationFrame(() => requestAnimationFrame(() => { if (token === sheetToken && els.sheet.open) els.sheet.classList.add('is-open'); }));
     if (push) history.replaceState(null, '', `#producto-${p.ref}`);
   }
 
+  let sheetToken = 0;
   function closeSheet({ instant = false } = {}) {
     if (!els.sheet.open) return;
+    sheetToken++;
     const finish = () => {
       els.sheet.close();
       els.sheet.classList.remove('is-dragging');
@@ -439,7 +519,10 @@
       const open = e.target.closest('[data-open]');
       if (open) { openSheet(open.dataset.open); return; }
       if (e.target.closest('[data-sheet-close]')) { closeSheet(); return; }
-      if (e.target.closest('[data-share]') && current) { share(current); }
+      if (e.target.closest('[data-share]') && current) { share(current); return; }
+      const pick = e.target.closest('[data-color-pick]');
+      if (pick) { pickColor(pick.dataset.colorPick); return; }
+      if (e.target.closest('[data-add-cart]')) { addToCart(); }
     });
 
     // Clic en el fondo oscuro cierra
@@ -454,6 +537,8 @@
   }
 
   function fromHash() {
+    const order = location.hash.match(/^#pedido\/([0-9a-f-]{36})$/i);
+    if (order) { closeSheet({ instant: true }); window.BagCart?.openOrder(order[1]); return; }
     const m = location.hash.match(/^#producto-(\d+)$/);
     if (m) openSheet(m[1].padStart(2, '0'), { push: false });
     else if (els.sheet.open) closeSheet({ instant: true });
@@ -474,6 +559,11 @@
     updateFavCount(false);
     bind();
     setupDrag();
+    window.BagCatalog = {
+      store, products, money, escapeHTML, imagesOf, hasPrice, toast, reduceMotion, ON_IMG_ERROR,
+      closeSheet, refreshSheet: () => { if (current && els.sheet.open) { const a = $('[data-add-cart]', els.sheetBody); if (a) a.textContent = addLabel(current); } },
+    };
+    window.BagCart?.init(window.BagCatalog);
     fromHash();
   }
 

@@ -4,7 +4,7 @@
    Nunca intercepta Supabase (datos, sesión y fotos van siempre directo a la red). */
 'use strict';
 
-const VERSION = 'panel-v1';
+const VERSION = 'panel-v2';
 const SHELL = [
   './',
   'admin.css',
@@ -12,6 +12,7 @@ const SHELL = [
   'images.js',
   'admin.js',
   'editor.js',
+  'orders.js',
   'manifest.webmanifest',
   'icons/icon-192.png',
   'icons/apple-touch-icon.png',

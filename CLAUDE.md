@@ -6,7 +6,8 @@ Migrado desde una tienda Kyte. El dueño del proyecto escribe en español: respo
 ## Stack y despliegue
 
 - Sitio estático: `index.html` + CSS + JS vanilla. **Sin dependencias, sin build, sin framework.** No agregues
-  npm, bundlers ni librerías sin preguntar.
+  npm, bundlers ni librerías sin preguntar. Única excepción aprobada: `assets/vendor/qrcode-generator-1.4.4.js`
+  (MIT, Kazuhiko Arase), copiada tal cual y cargada solo al mostrar un QR.
 - Producción: Vercel, conectado a GitHub. Cada push a `main` despliega solo en https://bagstoresf.vercel.app.
   Verifica el despliegue con `gh api repos/IEVN1001-22001664/BagStoreSF/commits/<sha>/status`.
 - Servidor local: `python3 -m http.server 4173` y abre http://localhost:4173. Para probar en celular, usa la IP
@@ -17,13 +18,14 @@ Migrado desde una tienda Kyte. El dueño del proyecto escribe en español: respo
 | Archivo | Qué contiene |
 | --- | --- |
 | `assets/js/config.js` | URL de Supabase y clave publicable (la usan el catálogo y el panel) |
-| `admin/` | Panel en `/admin/` (rutas `#piezas`, `#pieza/<uuid>`, `#nueva`, `#tienda`): `api.js` (REST, Storage y sesión, sin SDK), `admin.js` (lista con − n + y guardado automático, datos de la tienda y categorías), `editor.js` (editar/crear/eliminar pieza), `images.js` (redimensiona fotos en el navegador), `admin.css`, PWA: `manifest.webmanifest`, `sw.js`, `icons/` |
+| `admin/` | Panel en `/admin/` (rutas `#piezas`, `#pieza/<uuid>`, `#nueva`, `#pedidos`, `#pedido/<uuid>`, `#tienda`): `orders.js` (lista de pedidos, detalle y cobro), `api.js` (REST, Storage y sesión, sin SDK), `admin.js` (lista con − n + y guardado automático, datos de la tienda y categorías), `editor.js` (editar/crear/eliminar pieza), `images.js` (redimensiona fotos en el navegador), `admin.css`, PWA: `manifest.webmanifest`, `sw.js`, `icons/` |
 | `assets/js/data.js` | Carga el catálogo: Supabase (`rpc/catalog`) → copia en localStorage → `catalog.js`. Expone `window.BAGSTORE_READY` |
 | `assets/data/catalog.js` | **Respaldo** (ya no es la fuente de verdad): `window.BAGSTORE = { store, products }` con los 40 productos de la migración |
-| `assets/js/app.js` | Filtros, búsqueda, favoritos (localStorage), ficha de producto, paginación de 24, enlaces `#producto-NN` |
+| `assets/js/app.js` | Filtros, búsqueda, favoritos (localStorage), ficha de producto con selector de color, paginación de 24, enlaces `#producto-NN` |
+| `assets/js/cart.js` | Carrito (localStorage), crea el pedido con `rpc/create_order`, pantalla del pedido con QR, "Mis pedidos", ruta `#pedido/<uuid>` |
 | `assets/css/styles.css` | Tokens en `:root`, componentes y la regla de menos movimiento al final |
 | `assets/img/products/` | `NN-slug-K.webp` (máx. 1000px) y `NN-slug-K-sm.webp` (460px) para la cuadrícula |
-| `dev/` | Solo desarrollo, excluido de Vercel: break-ui (`break-ui.html`) y el panel con Supabase simulado (`admin.html`) |
+| `dev/` | Solo desarrollo, excluido de Vercel: break-ui (`break-ui.html`), el panel con Supabase simulado (`admin.html`) y el catálogo con carrito simulado (`catalogo.html`) |
 | `supabase/` | Migración a Supabase (en curso): esquema, RLS, bucket de fotos y `seed.sql` generado desde `catalog.js`. Ver `supabase/README.md`. Excluido de Vercel |
 
 ### Migración a Supabase (en curso)
@@ -47,6 +49,19 @@ Reglas de datos que la UI ya maneja; no las rompas:
 - Precio `null` o `0` = "Consultar precio". Nunca muestres `$0`.
 - `images: []` o una foto rota usan el logo como respaldo.
 - El contacto sale de `store.whatsapp` (primero) o `store.instagram`. Si ambos están vacíos, el botón lleva a Maps.
+- Con `store.instagram` lleno aparece el ícono de Instagram en el encabezado y un botón en "Visítanos" (`[data-instagram]`).
+
+### Carrito y pedidos (migración `004_pedidos.sql`)
+
+Flujo: la clienta agrega piezas (eligiendo color) → "Apartar por WhatsApp" crea el pedido (`create_order`, pública,
+valida disponibilidad y toma los precios de la base) → recibe un código `BS-XXXX` y un QR → manda el pedido por WhatsApp
+→ en tienda la dueña escanea el QR (abre `/admin/#pedido/<uuid>`) o busca el código en Pedidos → "Pagado y entregado"
+(`complete_order`) baja el inventario de cada color en una sola transacción; si algo no alcanza, no cambia nada.
+Decisiones: el pedido **no aparta** piezas; precio del momento del pedido; vence a los 7 días (se calcula al leer, aún se
+puede cobrar); solo nombre opcional; máximo 10 piezas; freno de 30 pedidos por minuto. Listo para un bot de WhatsApp:
+código con formato fijo y fecha de cada estado (`created_at`, `paid_at`, `cancelled_at`).
+El carrito solo aparece si hay WhatsApp y los datos traen `colors` (Supabase); con `catalog.js` de respaldo se oculta.
+En iPhone el QR abre Safari, no la app instalada: la dueña debe iniciar sesión también en Safari, o buscar el código.
 
 ## Diseño
 
@@ -71,6 +86,8 @@ Skills que el usuario pidió usar en el frontend: **emil-design-eng** y **mobile
 - Playwright y Chromium sirven para capturas. Los ajustes de mobile-native (hover pegado, notch, teclado, zoom)
   solo se confirman en un teléfono real.
 
+- **Carrito:** `http://localhost:4173/dev/catalogo.html?state=ok` usa `index.html` real con Supabase simulado
+  (`dev/catalog-mock.js`): la #21 tiene tres colores (uno agotado) y la #23 no tiene precio. Estados: `ok | fail | stockout | offline`.
 - **Panel:** `http://localhost:4173/dev/admin.html?state=ok` usa `admin/index.html` real con Supabase simulado
   (`dev/admin-mock.js`). Estados: `ok | denied | savefail | offline | empty | slow`. Contraseña `incorrecta` simula
   error de acceso; cualquier otra entra. No uses la cuenta real de la dueña para probar.
@@ -93,6 +110,5 @@ Skills que el usuario pidió usar en el frontend: **emil-design-eng** y **mobile
 ## Pendientes conocidos
 
 - Hay nombres repetidos (11 "Cartera Muñequera Steve Madden"); hoy solo los distingue `ref`. Lo ideal es agregar el color.
-- El Instagram de Kyte estaba mal capturado; `store.instagram` está vacío hasta tener el usuario correcto.
 - El banner de Kyte es de baja resolución (458×284) y no se usa.
 - Falta probar en un teléfono real: arrastrar para cerrar la ficha, notch, teclado, instalar el panel, cámara y fotos HEIC.
